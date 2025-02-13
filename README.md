@@ -28,8 +28,18 @@ The Biometric Integration (Hikvision) app seamlessly connects your Hikvision Fac
 
 - Easy Setup: With minimal configuration required, quickly connect the Hikvision face terminal to Frappe for seamless operation.
 
+## You Need
+
+- IP Address of the Device
+  
+- User Credential of the Device
+
+----------------------------------------------------------------------------------
+
 ![Screenshot from 2025-02-13 15-08-53](https://github.com/user-attachments/assets/6034cfd8-7f36-4284-8e7b-7a5c594fd745)
 ![Screenshot from 2025-02-13 15-08-02](https://github.com/user-attachments/assets/60f27d55-869e-493c-a007-a94a18f02827)
+
+----------------------------------------------------------------------------------
 
 ## Supported Devices
 
