@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "creation": "2025-02-11 19:01:02.427864",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ip",
+  "username",
+  "password",
+  "column_break_zuej",
+  "column_break_neqt",
+  "start_date_and_time",
+  "end_date_and_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "ip",
+   "fieldtype": "Data",
+   "label": "IP"
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Password"
+  },
+  {
+   "fieldname": "column_break_zuej",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "start_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Start Date And Time"
+  },
+  {
+   "fieldname": "end_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "End Date And Time"
+  },
+  {
+   "fieldname": "column_break_neqt",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-02-13 14:29:26.094322",
+ "modified_by": "Administrator",
+ "module": "Biometric Integration",
+ "name": "Biometric Integration Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "CE HR",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

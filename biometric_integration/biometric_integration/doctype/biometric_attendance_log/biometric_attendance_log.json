@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "creation": "2025-02-11 19:05:36.004485",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee_no",
+  "event_date",
+  "section_break_srot",
+  "punch_table"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee_no",
+   "fieldtype": "Data",
+   "label": "Employee No",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "event_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Event Date",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "section_break_srot",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "punch_table",
+   "fieldtype": "Table",
+   "label": "Punch Table",
+   "options": "Biometric Attendance Punch Table"
+  }
+ ],
+ "hide_toolbar": 1,
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-02-13 14:20:05.443826",
+ "modified_by": "Administrator",
+ "module": "Biometric Integration",
+ "name": "Biometric Attendance Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CE HR",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_no"
+}

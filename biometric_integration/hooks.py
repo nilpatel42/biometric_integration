@@ -137,6 +137,12 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
+doc_events = {
+    "Biometric Manual Punch": {
+        "on_trash": "biometric_integration.biometric_integration.doctype.biometric_manual_punch.biometric_manual_punch.delete_manual_punch"
+    }
+}
+
 # doc_events = {
 # 	"*": {
 # 		"on_update": "method",
@@ -147,8 +153,13 @@ app_license = "mit"
 
 # Scheduled Tasks
 # ---------------
-
-# scheduler_events = {
+scheduler_events = {
+    "cron": {
+        "0 9 * * *": [
+            "biometric_integration.biometric_integration.doctype.biometric_attendance_log.biometric_attendance_log.scheduled_attendance_sync",
+            "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_employee_names"
+        ]
+    }
 # 	"all": [
 # 		"biometric_integration.tasks.all"
 # 	],
@@ -164,7 +175,7 @@ app_license = "mit"
 # 	"monthly": [
 # 		"biometric_integration.tasks.monthly"
 # 	],
-# }
+}
 
 # Testing
 # -------
