@@ -156,8 +156,7 @@ doc_events = {
 scheduler_events = {
     "cron": {
         "0 9 * * *": [
-            "biometric_integration.biometric_integration.doctype.biometric_attendance_log.biometric_attendance_log.scheduled_attendance_sync",
-            "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_employee_names"
+            "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.scheduled_attendance_sync"
         ]
     }
 # 	"all": [
