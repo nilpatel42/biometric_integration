@@ -1,6 +1,6 @@
 ## Biometric Integration
 
-Please add a short description about your app here...The Biometric Integration (Hikvision) app seamlessly connects your Hikvision Face Terminal with the Frappe framework, enabling smooth integration for biometric attendance management. This app is designed to streamline the process of recording and syncing employee attendance data, providing real-time access control and status updates directly within your Frappe-based ERP system.
+The Biometric Integration (Hikvision) app seamlessly connects your Hikvision Face Terminal with the Frappe framework, enabling smooth integration for biometric attendance management. This app is designed to streamline the process of recording and syncing employee attendance data, providing real-time access control and status updates directly within your Frappe-based ERP system.
 
 ## Features:
 
