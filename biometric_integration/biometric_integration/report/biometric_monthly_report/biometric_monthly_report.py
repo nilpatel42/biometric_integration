@@ -11,8 +11,9 @@ def execute(filters=None):
     
     # Create columns for employee details
     columns = [
-        {"fieldname": "employee_name", "label": _("Employee Name"), "fieldtype": "Data", "width": 200},
-        {"fieldname": "employee_id", "label": _("Employee ID"), "fieldtype": "Data", "width": 100},
+        {"fieldname": "employee_name", "label": _("Employee Name"), "fieldtype": "Data", "width": 200, "align": "left"},
+        {"fieldname": "employee_id", "label": _("Employee ID"), "fieldtype": "Data", "width": 75, "align": "center"},
+        {"fieldname": "employee_department", "label": _("Department"), "fieldtype": "Data", "width": 75, "align": "center"},
     ]
     
     # Generate date columns
@@ -44,9 +45,14 @@ def execute(filters=None):
         SELECT DISTINCT 
             bal.employee_no,
             e.name as employee,
-            e.attendance_device_id
+            e.employee_name,
+            e.department,
+            e.attendance_device_id,
+            d.name,
+            d.department_name
         FROM `tabBiometric Attendance Log` bal
         LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+        LEFT JOIN `tabDepartment` d ON e.department = d.name        
         WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
     """, {
         "from_date": filters.get('date_range')[0],
@@ -68,7 +74,8 @@ def execute(filters=None):
     for employee in employees:
         row = {
             "employee_name": employee.employee_name,  # Fetching the name of the employee from Employee Doctype
-            "employee_id": employee.employee_no,
+            "employee_department": employee.department_name,
+            "employee_id": employee.employee_no,            
         }
         total_employee_duration = timedelta()
         
