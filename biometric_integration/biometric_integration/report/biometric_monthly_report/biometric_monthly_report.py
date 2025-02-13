@@ -11,8 +11,8 @@ def execute(filters=None):
     
     # Create columns for employee details
     columns = [
-        {"fieldname": "employee_name", "label": _( "Employee Name"), "fieldtype": "Data", "width": 200, "align": "left"},
-        {"fieldname": "employee_id", "label": _( "Employee ID"), "fieldtype": "Data", "width": 65, "align": "center"}
+        {"fieldname": "employee_name", "label": _("Employee Name"), "fieldtype": "Data", "width": 200},
+        {"fieldname": "employee_id", "label": _("Employee ID"), "fieldtype": "Data", "width": 100},
     ]
     
     # Generate date columns
@@ -33,22 +33,27 @@ def execute(filters=None):
     # Add total column
     columns.append({
         "fieldname": "total_duration",
-        "label": _( "Total"),
+        "label": _("Total"),
         "fieldtype": "Data",
         "width": 100,
         "align": "center"
     })
     
-    # Get all employees within date range
+    # Get all employees within date range with employee details based on attendance_device_id match
     employees = frappe.db.sql("""
-        SELECT DISTINCT e.employee_no, e.employee_name
-        FROM `tabBiometric Attendance Log` e
-        WHERE e.event_date BETWEEN %(from_date)s AND %(to_date)s
+        SELECT DISTINCT 
+            bal.employee_no,
+            e.name as employee,
+            e.attendance_device_id
+        FROM `tabBiometric Attendance Log` bal
+        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+        WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
     """, {
         "from_date": filters.get('date_range')[0],
         "to_date": filters.get('date_range')[1]
     }, as_dict=True)
     
+    # Sort employees by their employee number
     def natural_sort_key(emp):
         try:
             return int(emp["employee_no"])
@@ -59,16 +64,19 @@ def execute(filters=None):
     
     data = []
     
+    # Process each employee's attendance
     for employee in employees:
         row = {
-            "employee_name": employee.employee_name,
+            "employee_name": employee.employee_name,  # Fetching the name of the employee from Employee Doctype
             "employee_id": employee.employee_no,
         }
         total_employee_duration = timedelta()
         
+        # Loop through each date in the selected range
         for date in date_list:
             date_str = date.strftime('%Y-%m-%d')
             
+            # Get attendance logs for the given date
             attendance_logs = frappe.db.sql("""
                 SELECT al.name
                 FROM `tabBiometric Attendance Log` al
@@ -94,6 +102,7 @@ def execute(filters=None):
                     if duration.total_seconds() > 0:
                         valid_durations.append(duration)
             
+            # Calculate the total duration for the day
             if valid_durations:
                 total_duration = sum(valid_durations, timedelta())
                 formatted_duration = format_duration(total_duration)
@@ -103,6 +112,7 @@ def execute(filters=None):
             
             row[f"duration_{date.strftime('%Y%m%d')}"] = formatted_duration
         
+        # Format total duration for the employee
         row["total_duration"] = format_duration(total_employee_duration)
         data.append(row)
     

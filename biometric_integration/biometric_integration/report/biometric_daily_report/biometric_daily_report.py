@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns = [
-        {"fieldname": "employee_name", "label": _("Employee Name"), "fieldtype": "Data", "width": 200, "align": "left"},
-        {"fieldname": "employee_id", "label": _("Employee ID"), "fieldtype": "Data", "width": 65, "align": "center"},
-        {"fieldname": "total_duration", "label": _("Total Duration (HH:MM)"), "fieldtype": "Data", "width": 75, "align": "center"}
+        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 200, "align": "left"},
+        {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 65, "align": "center"},
+        {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 75, "align": "center"}
     ]
     
     if not filters or not filters.get('date'):
@@ -34,20 +34,25 @@ def execute(filters=None):
     
     # Get employees who had attendance that day
     present_employees = frappe.db.sql("""
-        SELECT DISTINCT e.employee_no, e.employee_name
-        FROM `tabBiometric Attendance Log` e
-        WHERE e.event_date = %(selected_date)s
+        SELECT DISTINCT 
+            bal.employee_no, 
+            e.employee_name,
+            e.attendance_device_id
+        FROM `tabBiometric Attendance Log` bal
+        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+        WHERE bal.event_date = %(selected_date)s                                      
     """, {"selected_date": selected_date}, as_dict=True)
     
     # Create a set of present employee IDs for faster lookup
-    present_employee_ids = {emp.employee_no for emp in present_employees}
+    present_employee_ids = {emp.attendance_device_id for emp in present_employees}
     
     def natural_sort_key(emp):
         try:
-            return int(emp["employee_no"])
+            return int(emp["attendance_device_id"])
         except ValueError:
-            return emp["employee_no"]
+            return emp["attendance_device_id"]
     
+    # Sort present employees by attendance_device_id (numeric)
     present_employees.sort(key=natural_sort_key)
     
     data = []
@@ -61,7 +66,7 @@ def execute(filters=None):
             FROM `tabBiometric Attendance Log` al
             WHERE al.employee_no = %(employee_no)s AND al.event_date = %(selected_date)s
             ORDER BY al.event_date
-        """, {"employee_no": employee.employee_no, "selected_date": selected_date}, as_dict=True)
+        """, {"employee_no": employee.attendance_device_id, "selected_date": selected_date}, as_dict=True)
         
         for log in attendance_logs:
             punches = frappe.db.sql("""
@@ -75,7 +80,7 @@ def execute(filters=None):
             row_indicators = {}
             
             row_data["employee_name"] = employee.employee_name
-            row_data["employee_id"] = employee.employee_no
+            row_data["employee_id"] = employee.attendance_device_id
             
             if len(punches) % 2 != 0:
                 total_duration_formatted = "Check"
@@ -152,13 +157,18 @@ def execute(filters=None):
     formatted_data.append(blank_row)
     formatted_data.append(blank_row)
     
-    # Add absent active employees
-    for employee in all_active_employees:
-        if employee.attendance_device_id not in present_employee_ids:
-            absent_row = {field["fieldname"]: None for field in columns}
-            absent_row["employee_name"] = employee.employee_name
-            absent_row["employee_id"] = employee.attendance_device_id
-            formatted_data.append(absent_row)
+    # Add absent active employees and sort by attendance_device_id
+    absent_active_employees = [
+        employee for employee in all_active_employees
+        if employee.attendance_device_id not in present_employee_ids
+    ]
+    absent_active_employees.sort(key=natural_sort_key)
+    
+    for employee in absent_active_employees:
+        absent_row = {field["fieldname"]: None for field in columns}
+        absent_row["employee_name"] = employee.employee_name
+        absent_row["employee_id"] = employee.attendance_device_id
+        formatted_data.append(absent_row)
     
     return columns, formatted_data
 
