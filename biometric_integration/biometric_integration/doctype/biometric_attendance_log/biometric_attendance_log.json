@@ -42,17 +42,19 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-13 14:20:05.443826",
+ "modified": "2025-02-14 15:01:30.479119",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Attendance Log",
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
    "delete": 1,
    "read": 1,
    "report": 1,
-   "role": "System Manager"
+   "role": "System Manager",
+   "write": 1
   },
   {
    "email": 1,

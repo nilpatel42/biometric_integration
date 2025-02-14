@@ -44,6 +44,72 @@ frappe.ui.form.on('Biometric Manual Punch', {
     }
 });
 
+frappe.ui.form.on('Biometric Manual Punch', {
+    refresh: function(frm) {
+        // Check if the document is new or not
+        if (!frm.is_new()) {
+            // Make the 'punch_time' and 'punch_date' fields read-only
+            frm.set_df_property('punch_time', 'read_only', 1);
+            frm.set_df_property('punch_date', 'read_only', 1);
+        } else {
+            // Make the fields editable if the document is new
+            frm.set_df_property('punch_time', 'read_only', 0);
+            frm.set_df_property('punch_date', 'read_only', 0);
+        }
+    }
+});
 
 
+frappe.ui.form.on('Biometric Manual Punch', {
+    refresh: function(frm) {
+        frm.add_custom_button(__('Edit Date & Time'), function() {
+            frappe.prompt([
+                {
+                    label: 'New Punch Date',
+                    fieldname: 'new_punch_date',
+                    fieldtype: 'Date',
+                    reqd: 1
+                },
+                {
+                    label: 'New Punch Time',
+                    fieldname: 'new_punch_time',
+                    fieldtype: 'Time',
+                    reqd: 1
+                }
+            ], function(values) {
+                // Disable the form fields to prevent changes during deletion
+                frm.set_df_property("punch_date", "read_only", 1);
+                frm.set_df_property("punch_time", "read_only", 1);
+
+                // Call the deletion method
+                frappe.call({
+                    method: "biometric_integration.biometric_integration.doctype.biometric_manual_punch.biometric_manual_punch.delete_manual_punch",
+                    args: {
+                        doc: frm.doc.name  // Send only document name
+                    },
+                    callback: function(deleteResponse) {
+                        if (!deleteResponse.exc) {
+                            // Allow changes after successful deletion
+                            frm.set_df_property("punch_date", "read_only", 0);
+                            frm.set_df_property("punch_time", "read_only", 0);
+
+                            // Set new values
+                            frm.set_value("punch_date", values.new_punch_date);
+                            frm.set_value("punch_time", values.new_punch_time);
+
+                            // Save the form immediately after updating values
+                            frm.save().then(() => {
+                                // Optionally, restore read-only after saving if necessary
+                                frm.set_df_property("punch_date", "read_only", 1);
+                                frm.set_df_property("punch_time", "read_only", 1);
+                            });
+                        } else {
+                            frappe.msgprint(__('Failed to delete the manual punch. Please try again.'));
+                        }
+                    }
+                });
+            }, __("Edit Punch Date & Time"), __("Update"));
+        });
+    }
+});
 

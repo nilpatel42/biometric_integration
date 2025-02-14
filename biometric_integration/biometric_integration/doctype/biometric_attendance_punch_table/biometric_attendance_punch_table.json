@@ -22,8 +22,7 @@
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "Punch Time",
-   "set_only_once": 1
+   "label": "Punch Time"
   },
   {
    "fieldname": "column_break_cgud",
@@ -47,7 +46,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-02-11 19:06:14.821558",
+ "modified": "2025-02-14 15:01:50.988860",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Attendance Punch Table",

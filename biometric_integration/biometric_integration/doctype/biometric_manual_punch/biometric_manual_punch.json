@@ -33,16 +33,14 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Punch Date",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "punch_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Punch Time",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "column_break_dfjc",
@@ -54,9 +52,10 @@
   }
  ],
  "hide_toolbar": 1,
+ "icon": "fa fa-superpowers",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-13 11:47:17.292164",
+ "modified": "2025-02-14 16:25:52.835017",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Manual Punch",
@@ -76,7 +75,6 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
