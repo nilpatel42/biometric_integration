@@ -59,6 +59,15 @@ def execute(filters=None):
     max_punches = 0
     valid_minutes = []
     
+    def is_time_between(timedelta_obj, start_hour, end_hour):
+        """Check if timedelta falls between start_hour and end_hour"""
+        if not timedelta_obj:
+            return False
+        # Convert timedelta to hours
+        total_seconds = timedelta_obj.total_seconds()
+        hours = total_seconds / 3600
+        return start_hour <= hours < end_hour
+
     # Process present employees
     for employee in present_employees:
         attendance_logs = frappe.db.sql("""
@@ -92,15 +101,32 @@ def execute(filters=None):
             
             row_data["total_duration"] = total_duration_formatted
             
+            # Check for Admin punch condition
+            if len(punches) == 2:
+                first_punch = punches[0]["punch_time"]
+                second_punch = punches[1]["punch_time"]
+                
+                # First punch should be between 7 AM (7 hours = 25200 seconds) and 10 AM (10 hours = 36000 seconds)
+                first_punch_valid = is_time_between(first_punch, 7, 10)
+                # Second punch should be between 7 PM (19 hours = 68400 seconds) and 10 PM (22 hours = 79200 seconds)
+                second_punch_valid = is_time_between(second_punch, 19, 22)
+                
+                if first_punch_valid and second_punch_valid:
+                    # Add "Admin" as third punch
+                    punches.append({"punch_time": None, "punch_type": "<-- Check"})
+            
             for i, punch in enumerate(punches, 1):
                 punch_field = f"punch_{i}"
-                formatted_time = format_punch_with_type(punch)
-                
-                if punch.get("punch_type") == "Manual":
-                    row_data[punch_field] = formatted_time
-                    row_indicators[punch_field] = "red"
+                if punch.get("punch_type") == "<-- Check":
+                    row_data[punch_field] = "<-- Check"
+                    row_indicators[punch_field] = "#ffff00"
                 else:
-                    row_data[punch_field] = formatted_time
+                    formatted_time = format_punch_with_type(punch)
+                    if punch.get("punch_type") == "Manual":
+                        row_data[punch_field] = formatted_time
+                        row_indicators[punch_field] = "red"
+                    else:
+                        row_data[punch_field] = formatted_time
             
             max_punches = max(max_punches, len(punches))
             data.append({
