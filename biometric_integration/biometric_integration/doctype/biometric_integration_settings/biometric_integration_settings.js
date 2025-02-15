@@ -55,9 +55,6 @@ frappe.ui.form.on('Biometric Integration Settings', {
             // Call the server-side method to update the manual punch
             frappe.call({
                 method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_manual_punch_for_employee',
-                args: {
-                    employee_id: 105
-                },
                 callback: function(response) {
                     frappe.msgprint(response.message);
                 }

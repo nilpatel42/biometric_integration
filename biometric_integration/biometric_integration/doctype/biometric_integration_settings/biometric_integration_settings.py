@@ -154,26 +154,25 @@ def scheduled_attendance_sync():
     try:
         # Get the settings
         settings = frappe.get_doc('Biometric Integration Settings', 'Biometric Integration Settings')
-        
-        # Set the time range for today
-        today = datetime.now().date()
-        start_time = datetime.combine(today, datetime.strptime("00:00:00", "%H:%M:%S").time())
-        end_time = datetime.combine(today, datetime.strptime("23:59:59", "%H:%M:%S").time())
+
+        yesterday_date = (datetime.now() + timedelta(days=-1)).date()
+
+        start_time = datetime.combine(yesterday_date, datetime.strptime("00:00:00", "%H:%M:%S").time())
+        end_time = datetime.combine(yesterday_date, datetime.strptime("23:59:59", "%H:%M:%S").time())
         
         # Update the settings with today's date range
         settings.start_date_and_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
         settings.end_date_and_time = end_time.strftime('%Y-%m-%d %H:%M:%S')
         settings.save()
         
-        # Call the sync function
-        frappe.enqueue(
-            'biometric_attendance_sync.biometric_attendance_sync.doctype.biometric_attendance_log.biometric_attendance_sync.sync_attendance',
-            queue='long',
-            timeout=1500
-        )
+        sync_attendance()
         
         frappe.logger().info("Scheduled attendance sync started successfully")
-        
+
+        update_manual_punch_for_employee()
+
+        frappe.logger().info("Manual punches added for employee 105 - Maganbhai")
+
     except Exception as e:
         frappe.logger().error(f"Scheduled attendance sync failed: {str(e)}")
         frappe.log_error(f"Scheduled attendance sync failed: {str(e)}", "Daily Attendance Sync Error")
@@ -256,9 +255,10 @@ from datetime import datetime, timedelta
 import frappe
 
 @frappe.whitelist()
-def update_manual_punch_for_employee(employee_id):
+def update_manual_punch_for_employee():
     try:
         # Employee ID set as Magan (direct text input)
+        employee_id = "105"
         employee_no = "EMP250261"
 
         # Get today's date
