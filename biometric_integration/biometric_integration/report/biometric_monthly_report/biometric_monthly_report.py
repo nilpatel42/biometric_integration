@@ -6,6 +6,8 @@ def execute(filters=None):
     if not filters or not filters.get('date_range'):
         frappe.throw(_('Please select Date Range'))
     
+    total_hours_hh_mm = filters.get('total_hours_hh_mm', False)
+    
     from_date = datetime.strptime(filters.get('date_range')[0], '%Y-%m-%d')
     to_date = datetime.strptime(filters.get('date_range')[1], '%Y-%m-%d')
     
@@ -32,32 +34,30 @@ def execute(filters=None):
         current_date += timedelta(days=1)
     
     # Add total column
-    columns.append({
-        "fieldname": "total_duration",
-        "label": _("Total"),
-        "fieldtype": "Data",
-        "width": 100,
-        "align": "center"
-    })
+    if total_hours_hh_mm != 0:
+            columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
+
+    columns.append({"fieldname": "total_duration_decimal", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"})
     
     # Get all employees within date range with employee details based on attendance_device_id match
     employees = frappe.db.sql("""
-        SELECT DISTINCT 
-            bal.employee_no,
-            e.name as employee,
-            e.employee_name,
-            e.department,
-            e.attendance_device_id,
-            d.name,
-            d.department_name
-        FROM `tabBiometric Attendance Log` bal
-        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
-        LEFT JOIN `tabDepartment` d ON e.department = d.name        
-        WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
-    """, {
-        "from_date": filters.get('date_range')[0],
-        "to_date": filters.get('date_range')[1]
-    }, as_dict=True)
+            SELECT DISTINCT 
+                bal.employee_no,
+                e.name as employee,
+                e.employee_name,
+                e.department,
+                e.attendance_device_id,
+                d.name,
+                d.department_name
+            FROM `tabBiometric Attendance Log` bal
+            LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+            LEFT JOIN `tabDepartment` d ON e.department = d.name        
+            WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
+            AND e.status = 'Active'
+        """, {
+            "from_date": filters.get('date_range')[0],
+            "to_date": filters.get('date_range')[1]
+        }, as_dict=True)
     
     # Sort employees by their employee number
     def natural_sort_key(emp):
@@ -121,6 +121,7 @@ def execute(filters=None):
         
         # Format total duration for the employee
         row["total_duration"] = format_duration(total_employee_duration)
+        row["total_duration_decimal"] = format_decimal_duration(total_employee_duration)
         data.append(row)
     
     # Calculate totals for each date and overall
@@ -169,10 +170,15 @@ def calculate_total_duration(punches):
 
 def format_duration(duration):
     total_seconds = int(duration.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    
-    if seconds > 30:
-        minutes += 1
-    
+    hours, minutes = divmod(total_seconds // 60, 60)  # Convert total seconds to minutes first, then get hours & minutes
+
     return f"{hours:02d}:{minutes:02d}"
+
+
+def format_decimal_duration(duration):
+    # Convert timedelta to total minutes
+    total_minutes = int(duration.total_seconds() // 60)
+    
+    hours = total_minutes // 60
+    minutes_fraction = (total_minutes % 60) / 60  # Convert remaining minutes to fraction
+    return f"{hours + minutes_fraction:.2f}"

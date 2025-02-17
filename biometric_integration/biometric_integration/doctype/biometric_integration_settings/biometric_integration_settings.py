@@ -249,105 +249,124 @@ def update_all_manual_punches():
         return {'status': 'error', 'message': f"Error updating manual punches: {str(e)}"}
 
 
-
-
-from datetime import datetime, timedelta
-import frappe
-
 @frappe.whitelist()
 def update_manual_punch_for_employee():
     try:
-        # Employee ID set as Magan (direct text input)
         employee_id = "105"
         employee_no = "EMP250261"
-
-        # Get today's date
         yesterday_date = (datetime.now() + timedelta(days=-1)).date()
 
-        # Fetch the Biometric Attendance Log for the employee for today's date
+        # Get system punches
         query = """
             SELECT name FROM `tabBiometric Attendance Log`
             WHERE employee_no = %s AND event_date = %s
         """
-        
         attendance_logs = frappe.db.sql(query, (employee_id, yesterday_date), as_dict=True)
-
+        
         if not attendance_logs:
             return {'status': 'error', 'message': f"No attendance log found for employee {employee_no} on {yesterday_date}"}
 
-        total_seconds = 0
-        punch_in = None
-        punch_out = None
-
-        # Iterate through each attendance log to calculate total punch time from punch_table (child table)
+        # Calculate total time from system punches
+        total_minutes = 0
         for log in attendance_logs:
             attendance_doc = frappe.get_doc('Biometric Attendance Log', log['name'])
-
-            # Ensure punch_table exists and is not empty
             if not attendance_doc.punch_table:
-                return {'status': 'error', 'message': f"No punches found in the attendance log for employee {employee_no} on {yesterday_date}"}
-
-            # Sort punches by punch_time to ensure correct time calculation
+                continue
+                
             sorted_punches = sorted(attendance_doc.punch_table, key=lambda p: p.punch_time)
-
-            # Process each punch, ensuring 'in' and 'out' punches are paired
             for i in range(1, len(sorted_punches)):
                 punch_in = sorted_punches[i-1].punch_time
                 punch_out = sorted_punches[i].punch_time
-
-                # If punch_time is in timedelta, convert it to string
+                
+                # Convert timedelta to string
                 if isinstance(punch_in, timedelta):
-                    punch_in = str(datetime.min + punch_in).split(' ')[1]
+                    punch_in = (datetime.min + punch_in).strftime('%H:%M:%S')
                 if isinstance(punch_out, timedelta):
-                    punch_out = str(datetime.min + punch_out).split(' ')[1]
+                    punch_out = (datetime.min + punch_out).strftime('%H:%M:%S')
+                
+                # If already string, ensure proper format
+                if isinstance(punch_in, str):
+                    punch_in = punch_in.split()[0] if ' ' in punch_in else punch_in
+                if isinstance(punch_out, str):
+                    punch_out = punch_out.split()[0] if ' ' in punch_out else punch_out
+                
+                # Convert to datetime and calculate minutes
+                punch_in_dt = datetime.strptime(punch_in, '%H:%M:%S')
+                punch_out_dt = datetime.strptime(punch_out, '%H:%M:%S')
+                total_minutes += (punch_out_dt - punch_in_dt).total_seconds() / 60
 
-                # Convert both punch times to datetime objects
-                punch_in = datetime.strptime(punch_in, '%H:%M:%S')
-                punch_out = datetime.strptime(punch_out, '%H:%M:%S')
+        # Get existing manual punches
+        manual_query = """
+            SELECT punch_time 
+            FROM `tabBiometric Manual Punch`
+            WHERE employee = %s AND punch_date = %s
+        """
+        manual_punches = frappe.db.sql(manual_query, (employee_no, yesterday_date), as_dict=True)
 
-                # Add the difference to total_seconds
-                total_seconds += (punch_out - punch_in).total_seconds()
+        # Add time from existing manual punches
+        for i in range(1, len(manual_punches), 2):
+            if i < len(manual_punches):
+                punch_in = manual_punches[i-1].punch_time
+                punch_out = manual_punches[i].punch_time
+                
+                # Convert timedelta to string if needed
+                if isinstance(punch_in, timedelta):
+                    punch_in = (datetime.min + punch_in).strftime('%H:%M:%S')
+                if isinstance(punch_out, timedelta):
+                    punch_out = (datetime.min + punch_out).strftime('%H:%M:%S')
+                
+                # If already string, ensure proper format
+                if isinstance(punch_in, str):
+                    punch_in = punch_in.split()[0] if ' ' in punch_in else punch_in
+                if isinstance(punch_out, str):
+                    punch_out = punch_out.split()[0] if ' ' in punch_out else punch_out
+                
+                punch_in_dt = datetime.strptime(punch_in, '%H:%M:%S')
+                punch_out_dt = datetime.strptime(punch_out, '%H:%M:%S')
+                total_minutes += (punch_out_dt - punch_in_dt).total_seconds() / 60
 
-        # If the total punch time is less than 1 hour (3600 seconds), calculate the remaining time
-        remaining_seconds = 3600 - total_seconds
-
-        if remaining_seconds > 0:
-            # First (in) punch time is set to "08:00:00"
-            punch_in_time = "08:00:00"  # Fixed punch-in time as 08:00:00
+        # If total time is less than 1 hour (60 minutes)
+        if total_minutes < 60:
+            remaining_minutes = 60 - total_minutes
             
-            # Calculate the punch out time based on the remaining seconds
-            punch_in_datetime = datetime.strptime(punch_in_time, '%H:%M:%S')
-            punch_out_datetime = punch_in_datetime + timedelta(seconds=remaining_seconds)
-            punch_out_time = punch_out_datetime.strftime('%H:%M:%S')
-
-            # Add the first (in) punch
+            # Fixed first punch at 08:00
+            punch_in_time = "08:00:00"
+            
+            # Calculate second punch based on remaining minutes needed
+            punch_in_dt = datetime.strptime(punch_in_time, '%H:%M:%S')
+            punch_out_dt = punch_in_dt + timedelta(minutes=int(remaining_minutes))
+            punch_out_time = punch_out_dt.strftime('%H:%M:%S')
+            
+            # Add first manual punch (fixed at 08:00)
             manual_punch_in_doc = frappe.get_doc({
                 'doctype': 'Biometric Manual Punch',
-                'employee': employee_no,  # Employee ID (105)
-                'punch_date': yesterday_date,  # Today's date for the punch
-                'punch_time': punch_in_time,  # Punch-in time set to 08:00:00
+                'employee': employee_no,
+                'punch_date': yesterday_date,
+                'punch_time': punch_in_time,
             })
             manual_punch_in_doc.insert(ignore_permissions=True)
-
-            # Add the second (out) punch to complete the 1-hour total
+            
+            # Add second manual punch (calculated time)
             manual_punch_out_doc = frappe.get_doc({
                 'doctype': 'Biometric Manual Punch',
-                'employee': employee_no,  # Employee ID (105)
-                'punch_date': yesterday_date,  # Today's date for the punch
-                'punch_time': punch_out_time,  # Calculated punch out time
+                'employee': employee_no,
+                'punch_date': yesterday_date,
+                'punch_time': punch_out_time,
             })
             manual_punch_out_doc.insert(ignore_permissions=True)
-
+            
             frappe.db.commit()
-
-            # Run the update_all_manual_punches function after adding the manual punches
             update_all_manual_punches()
-
-            return {'status': 'success', 'message': f"Manual punches added for employee {employee_no}: {punch_in_time} and {punch_out_time}"}
-
-        return {'status': 'success', 'message': f"No manual punch needed for Maganbhai. Total time is already 1 hour."}
-
-    except frappe.ValidationError as e:
-        return {'status': 'error', 'message': str(e)}
+            
+            return {
+                'status': 'success',
+                'message': f"Manual punches added for employee {employee_no}: {punch_in_time} and {punch_out_time}"
+            }
+            
+        return {
+            'status': 'success',
+            'message': f"No manual punch needed. Total time is already 1 hour."
+        }
+        
     except Exception as e:
         return {'status': 'error', 'message': f"Error updating manual punch: {str(e)}"}

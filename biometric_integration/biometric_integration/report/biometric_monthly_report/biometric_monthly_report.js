@@ -8,7 +8,16 @@ frappe.query_reports["Biometric Monthly Report"] = {
             label: __("Enter Your Date Range"),
             fieldtype: "Date Range",
         },
-    ]
+        {
+                fieldname: 'total_hours_hh_mm',
+                label: 'Total Hours (HH:MM)',
+                fieldtype: 'Check',
+        },
+    ],
+    onload: function(report) {
+        // Ensuring the default value of total_hours_hh_mm is 0 on load
+        report.set_filter_value("total_hours_hh_mm", 0);
+    }
 };
 
 

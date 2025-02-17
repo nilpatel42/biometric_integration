@@ -66,7 +66,7 @@ def add_manual_punch(employee, punch_date, punch_time):
     except Exception as e:
         return {'status': 'error', 'message': f"Error adding manual punch: {str(e)}"}
 
-
+@frappe.whitelist()
 def delete_manual_punch(doc, method):
     try:
         employee = doc.employee
