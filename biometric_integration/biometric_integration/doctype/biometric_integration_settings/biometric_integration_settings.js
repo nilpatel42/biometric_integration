@@ -27,7 +27,7 @@ frappe.ui.form.on("Biometric Integration Settings", {
 
 frappe.ui.form.on('Biometric Integration Settings', {
     refresh: function(frm) {
-        frm.add_custom_button(__('Update All Manual Punches'), function() {
+        frm.add_custom_button(__('Sync Manual Punches'), function() {
             // Confirm action
             frappe.confirm(
                 __('Are you sure you want to update all manual punches?'),

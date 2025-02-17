@@ -81,30 +81,25 @@ frappe.ui.form.on('Biometric Manual Punch', {
                 frm.set_df_property("punch_date", "read_only", 1);
                 frm.set_df_property("punch_time", "read_only", 1);
 
-                // Call the deletion method
+                // Call the server-side method to delete old punch and update the date and time
                 frappe.call({
-                    method: "biometric_integration.biometric_integration.doctype.biometric_manual_punch.biometric_manual_punch.delete_manual_punch",
+                    method: "biometric_integration.biometric_integration.doctype.biometric_manual_punch.biometric_manual_punch.edit_button_delete_punch",
                     args: {
-                        doc: frm.doc.name  // Send only document name
+                        doc_name: frm.doc.name,
+                        new_punch_date: values.new_punch_date,
+                        new_punch_time: values.new_punch_time
                     },
-                    callback: function(deleteResponse) {
-                        if (!deleteResponse.exc) {
-                            // Allow changes after successful deletion
-                            frm.set_df_property("punch_date", "read_only", 0);
-                            frm.set_df_property("punch_time", "read_only", 0);
+                    callback: function(response) {
+                        if (response.message) {
+                            
+                            frm.reload_doc()
 
-                            // Set new values
-                            frm.set_value("punch_date", values.new_punch_date);
-                            frm.set_value("punch_time", values.new_punch_time);
-
-                            // Save the form immediately after updating values
-                            frm.save().then(() => {
-                                // Optionally, restore read-only after saving if necessary
-                                frm.set_df_property("punch_date", "read_only", 1);
-                                frm.set_df_property("punch_time", "read_only", 1);
-                            });
+                            frappe.show_alert({
+                                message: 'Date & Time Edited Successfully',
+                                indicator: 'green'
+                            }, 5);
                         } else {
-                            frappe.msgprint(__('Failed to delete the manual punch. Please try again.'));
+                            frappe.msgprint(__('Failed to update the manual punch. Please try again.'));
                         }
                     }
                 });
@@ -112,4 +107,5 @@ frappe.ui.form.on('Biometric Manual Punch', {
         });
     }
 });
+
 

@@ -67,11 +67,58 @@ def add_manual_punch(employee, punch_date, punch_time):
         return {'status': 'error', 'message': f"Error adding manual punch: {str(e)}"}
 
 @frappe.whitelist()
-def delete_manual_punch(doc, method):
+def edit_button_delete_punch(doc_name, new_punch_date, new_punch_time):
     try:
+        # Fetch the Biometric Manual Punch document
+        doc = frappe.get_doc('Biometric Manual Punch', doc_name)
         employee = doc.employee
         punch_date = doc.punch_date
         punch_time = doc.punch_time
+
+        # Fetch the attendance_device_id from the Employee doctype
+        attendance_device_id = frappe.db.get_value('Employee', employee, 'attendance_device_id')
+
+        # Check if an Attendance Log exists for the given employee and date
+        attendance_log = frappe.db.sql("""
+            SELECT name 
+            FROM `tabBiometric Attendance Log` 
+            WHERE employee_no = %s AND event_date = %s
+        """, (attendance_device_id, punch_date), as_dict=True)
+
+        if not attendance_log:
+            raise Exception("No attendance log found for the given date and employee.")
+        
+        attendance_log_name = attendance_log[0].name
+
+        # Delete the punch from the Biometric Attendance Punch Table
+        frappe.db.sql("""
+            DELETE FROM `tabBiometric Attendance Punch Table` 
+            WHERE parent = %s AND punch_time = %s AND punch_type = 'Manual'
+        """, (attendance_log_name, punch_time))
+
+        # Update the punch date and time in the Biometric Manual Punch table
+        frappe.db.sql("""
+            UPDATE `tabBiometric Manual Punch`
+            SET punch_date = %s, punch_time = %s
+            WHERE name = %s
+        """, (new_punch_date, new_punch_time, doc_name))
+
+        add_manual_punch(employee, new_punch_date, new_punch_time)
+
+        frappe.db.commit()
+
+        return True
+    except Exception as e:
+        frappe.log_error(f"Error editing manual punch: {str(e)}")
+        return False
+
+
+@frappe.whitelist()
+def delete_manual_punch(doc, method=None):
+    try:
+        employee = doc.get("employee")
+        punch_date = doc.get("punch_date")
+        punch_time = doc.get("punch_time")
 
         # Fetch the attendance_device_id from the Employee doctype
         employee_name = frappe.db.get_value('Employee', employee, 'employee_name')

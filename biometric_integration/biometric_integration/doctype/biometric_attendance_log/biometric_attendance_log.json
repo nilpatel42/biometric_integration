@@ -38,10 +38,11 @@
    "options": "Biometric Attendance Punch Table"
   }
  ],
+ "hide_toolbar": 1,
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-17 13:33:08.860866",
+ "modified": "2025-02-17 19:23:44.872250",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Attendance Log",

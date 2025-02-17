@@ -55,7 +55,7 @@
  "icon": "fa fa-superpowers",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-14 16:25:52.835017",
+ "modified": "2025-02-17 19:23:29.580922",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Manual Punch",
@@ -87,5 +87,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
