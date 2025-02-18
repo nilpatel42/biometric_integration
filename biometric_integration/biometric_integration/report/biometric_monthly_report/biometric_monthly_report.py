@@ -35,29 +35,29 @@ def execute(filters=None):
     
     # Add total column
     if total_hours_hh_mm != 0:
-            columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
+        columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
 
     columns.append({"fieldname": "total_duration_decimal", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"})
     
     # Get all employees within date range with employee details based on attendance_device_id match
     employees = frappe.db.sql("""
-            SELECT DISTINCT 
-                bal.employee_no,
-                e.name as employee,
-                e.employee_name,
-                e.department,
-                e.attendance_device_id,
-                d.name,
-                d.department_name
-            FROM `tabBiometric Attendance Log` bal
-            LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
-            LEFT JOIN `tabDepartment` d ON e.department = d.name        
-            WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
-            AND e.status = 'Active'
-        """, {
-            "from_date": filters.get('date_range')[0],
-            "to_date": filters.get('date_range')[1]
-        }, as_dict=True)
+        SELECT DISTINCT 
+            bal.employee_no,
+            e.name as employee,
+            e.employee_name,
+            e.department,
+            e.attendance_device_id,
+            d.name,
+            d.department_name
+        FROM `tabBiometric Attendance Log` bal
+        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+        LEFT JOIN `tabDepartment` d ON e.department = d.name        
+        WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
+        AND e.status = 'Active'
+    """, {
+        "from_date": filters.get('date_range')[0],
+        "to_date": filters.get('date_range')[1]
+    }, as_dict=True)
     
     # Sort employees by their employee number
     def natural_sort_key(emp):
@@ -73,9 +73,9 @@ def execute(filters=None):
     # Process each employee's attendance
     for employee in employees:
         row = {
-            "employee_name": employee.employee_name,  # Fetching the name of the employee from Employee Doctype
+            "employee_name": employee.employee_name,
             "employee_department": employee.department_name,
-            "employee_id": employee.employee_no,            
+            "employee_id": employee.employee_no,
         }
         total_employee_duration = timedelta()
         
@@ -105,22 +105,22 @@ def execute(filters=None):
                 """, {"log_name": log.name}, as_dict=True)
                 
                 if len(punches) % 2 == 0 and punches:
-                    duration = calculate_total_duration(punches)
-                    if duration.total_seconds() > 0:
+                    duration = calculate_total_minutes(punches)
+                    if duration > 0:
                         valid_durations.append(duration)
             
             # Calculate the total duration for the day
             if valid_durations:
-                total_duration = sum(valid_durations, timedelta())
-                formatted_duration = format_duration(total_duration)
-                total_employee_duration += total_duration
+                total_duration = sum(valid_durations)
+                formatted_duration = format_minutes_to_hhmm(total_duration)
+                total_employee_duration += timedelta(minutes=total_duration)
             else:
                 formatted_duration = "00:00"
             
             row[f"duration_{date.strftime('%Y%m%d')}"] = formatted_duration
         
         # Format total duration for the employee
-        row["total_duration"] = format_duration(total_employee_duration)
+        row["total_duration"] = format_minutes_to_hhmm(int(total_employee_duration.total_seconds() / 60))
         row["total_duration_decimal"] = format_decimal_duration(total_employee_duration)
         data.append(row)
     
@@ -154,31 +154,27 @@ def execute(filters=None):
     
     return columns, data
 
-def calculate_total_duration(punches):
-    total_duration = timedelta()
+def calculate_total_minutes(punches):
+    total_minutes = 0
     
     for i in range(0, len(punches) - 1, 2):
         try:
             punch_in = punches[i]["punch_time"]
             punch_out = punches[i + 1]["punch_time"]
-            time_diff = punch_out - punch_in
-            total_duration += time_diff
+            
+            minutes_diff = int(punch_out.total_seconds() / 60) - int(punch_in.total_seconds() / 60)
+            total_minutes += minutes_diff
         except Exception:
-            return timedelta()
+            return 0
     
-    return total_duration
+    return total_minutes
 
-def format_duration(duration):
-    total_seconds = int(duration.total_seconds())
-    hours, minutes = divmod(total_seconds // 60, 60)  # Convert total seconds to minutes first, then get hours & minutes
-
-    return f"{hours:02d}:{minutes:02d}"
-
+def format_minutes_to_hhmm(minutes):
+    hours, mins = divmod(minutes, 60)
+    return f"{hours:02}:{mins:02}"
 
 def format_decimal_duration(duration):
-    # Convert timedelta to total minutes
     total_minutes = int(duration.total_seconds() // 60)
-    
     hours = total_minutes // 60
     minutes_fraction = (total_minutes % 60) / 60  # Convert remaining minutes to fraction
     return f"{hours + minutes_fraction:.2f}"
