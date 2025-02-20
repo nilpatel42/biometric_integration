@@ -155,7 +155,7 @@ doc_events = {
 # ---------------
 scheduler_events = {
     "cron": {
-        "15 8 * * *": [
+        "15 8 * * 0-2,4-6": [
             "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.scheduled_attendance_sync"
         ]
     }

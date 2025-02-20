@@ -68,13 +68,15 @@ frappe.ui.form.on('Biometric Manual Punch', {
                     label: 'New Punch Date',
                     fieldname: 'new_punch_date',
                     fieldtype: 'Date',
-                    reqd: 1
+                    reqd: 1,
+                    default: frm.doc.punch_date
                 },
                 {
                     label: 'New Punch Time',
                     fieldname: 'new_punch_time',
                     fieldtype: 'Time',
-                    reqd: 1
+                    reqd: 1,
+                    default: frm.doc.punch_time
                 }
             ], function(values) {
                 // Disable the form fields to prevent changes during deletion

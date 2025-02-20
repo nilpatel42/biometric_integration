@@ -101,7 +101,7 @@ def execute(filters=None):
             
             row_data["total_duration"] = total_duration_formatted
             
-            # Check for Admin punch condition
+            # Check for <-- Check punch condition
             if len(punches) == 2:
                 first_punch = punches[0]["punch_time"]
                 second_punch = punches[1]["punch_time"]
@@ -112,7 +112,7 @@ def execute(filters=None):
                 second_punch_valid = is_time_between(second_punch, 19, 22)
                 
                 if first_punch_valid and second_punch_valid:
-                    # Add "Admin" as third punch
+                    # Add "<-- Check" as third punch
                     punches.append({"punch_time": None, "punch_type": "<-- Check"})
             
             for i, punch in enumerate(punches, 1):
