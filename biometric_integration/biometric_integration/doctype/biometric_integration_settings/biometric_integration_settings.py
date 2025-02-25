@@ -268,7 +268,7 @@ def update_manual_punch_for_employee():
         # Define employee details
         employee_id = "105"
         employee_no = "EMP250261"
-        yesterday_date = (datetime.now() + timedelta(days=-2)).date()
+        yesterday_date = (datetime.now() + timedelta(days=-1)).date()
 
         # Lists to store punch times with their type (IN/OUT)
         punch_records = []
