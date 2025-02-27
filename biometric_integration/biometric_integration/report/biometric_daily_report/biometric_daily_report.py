@@ -32,15 +32,15 @@ def execute(filters=None):
             attendance_device_id
     """, as_dict=True)
     
-    # Get employees who had attendance that day
+    # Get employees who had at least one punch that day
     present_employees = frappe.db.sql("""
         SELECT DISTINCT 
-            bal.employee_no, 
             e.employee_name,
             e.attendance_device_id
         FROM `tabBiometric Attendance Log` bal
-        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
-        WHERE bal.event_date = %(selected_date)s                                      
+        JOIN `tabBiometric Attendance Punch Table` punch ON punch.parent = bal.name
+        JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
+        WHERE bal.event_date = %(selected_date)s
     """, {"selected_date": selected_date}, as_dict=True)
     
     # Create a set of present employee IDs for faster lookup
@@ -67,7 +67,7 @@ def execute(filters=None):
         total_seconds = timedelta_obj.total_seconds()
         hours = total_seconds / 3600
         return start_hour <= hours < end_hour
-
+    
     # Process present employees
     for employee in present_employees:
         attendance_logs = frappe.db.sql("""
@@ -85,6 +85,10 @@ def execute(filters=None):
                 ORDER BY at.punch_time
             """, {"log_name": log.name}, as_dict=True)
             
+            # Skip this log if there are no punches
+            if not punches:
+                continue
+                
             row_data = {}
             row_indicators = {}
             

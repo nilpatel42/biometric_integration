@@ -268,18 +268,46 @@ def update_manual_punch_for_employee():
         # Define employee details
         employee_id = "105"
         employee_no = "EMP250261"
-        yesterday_date = (datetime.now() + timedelta(days=-1)).date()
-
+        
+        # Determine which day to process
+        current_date = datetime.now().date()
+        current_day = current_date.weekday()  # Monday is 0, Sunday is 6
+        
+        # If today is Thursday (3), process Tuesday's data (2 days ago)
+        # Otherwise process yesterday's data
+        if current_day == 3:  # Thursday
+            target_date = (datetime.now() + timedelta(days=-2)).date()  # Tuesday (skip Wednesday)
+        else:
+            target_date = (datetime.now() + timedelta(days=-1)).date()  # Yesterday
+        
+        # First, check if employee 105 has any auto punches for the target date
+        check_query = """
+            SELECT COUNT(*) as punch_count
+            FROM `tabBiometric Attendance Log`
+            WHERE employee_no = %s AND event_date = %s
+        """
+        check_result = frappe.db.sql(check_query, (employee_id, target_date), as_dict=True)
+        
+        has_auto_punches = check_result[0]['punch_count'] > 0 if check_result else False
+        
+        if not has_auto_punches:
+            # If no auto punches exist for employee 105, skip the 1-hour calculation
+            update_all_manual_punches()
+            return {
+                'status': 'success',
+                'message': f"No auto punches found for employee {employee_no} on {target_date}. Skipping 1-hour calculation."
+            }
+        
         # Lists to store punch times with their type (IN/OUT)
         punch_records = []
-
+        
         # Get system punches
         query = """
             SELECT name 
             FROM `tabBiometric Attendance Log`
             WHERE employee_no = %s AND event_date = %s
         """
-        attendance_logs = frappe.db.sql(query, (employee_id, yesterday_date), as_dict=True)
+        attendance_logs = frappe.db.sql(query, (employee_id, target_date), as_dict=True)
         
         # Add system punches to the list
         for log in attendance_logs:
@@ -290,21 +318,21 @@ def update_manual_punch_for_employee():
                 punch_time = parse_time(punch.punch_time).replace(second=0, microsecond=0)
                 punch_type = 'IN' if idx % 2 == 0 else 'OUT'  # Alternate IN/OUT
                 punch_records.append((punch_time, punch_type, 'system'))
-
+                
         # Get manual punches
         manual_query = """
             SELECT punch_time 
             FROM `tabBiometric Manual Punch`
             WHERE employee = %s AND punch_date = %s
         """
-        manual_punches = frappe.db.sql(manual_query, (employee_no, yesterday_date), as_dict=True)
+        manual_punches = frappe.db.sql(manual_query, (employee_no, target_date), as_dict=True)
         
         # Add manual punches to the list
         for idx, punch in enumerate(manual_punches):
             punch_time = parse_time(punch.punch_time).replace(second=0, microsecond=0)
             punch_type = 'IN' if idx % 2 == 0 else 'OUT'  # Alternate IN/OUT
             punch_records.append((punch_time, punch_type, 'manual'))
-
+            
         # Sort all punches by time
         punch_records.sort(key=lambda x: x[0])
         
@@ -312,12 +340,12 @@ def update_manual_punch_for_employee():
         print("\nAll punch records in order:")
         for time, type_, source in punch_records:
             print(f"{time.strftime('%H:%M:%S')} ({type_}) - {source}")
-
+            
         # Calculate total time and store punch pairs
         total_minutes = 0
         punch_pairs = []
         current_in = None
-
+        
         for time, type_, source in punch_records:
             if type_ == 'IN':
                 current_in = time
@@ -327,9 +355,9 @@ def update_manual_punch_for_employee():
                 punch_pairs.append((current_in, time))
                 print(f"Duration: {current_in.strftime('%H:%M:%S')} - {time.strftime('%H:%M:%S')} = {duration} minutes")
                 current_in = None
-
+                
         print(f"\nTotal Minutes: {total_minutes}")
-
+        
         # If total time is exactly 60 minutes, just update and exit
         if total_minutes == 60:
             update_all_manual_punches()
@@ -337,7 +365,7 @@ def update_manual_punch_for_employee():
                 'status': 'success',
                 'message': f"No manual punch needed. Total working time is already 60 minutes."
             }
-
+            
         # If total time is less than 1 hour (60 minutes), add manual punches
         if total_minutes < 60:
             remaining_minutes = 60 - total_minutes
@@ -347,20 +375,20 @@ def update_manual_punch_for_employee():
             punch_in_dt = datetime.strptime(punch_in_time, '%H:%M:%S').replace(second=0, microsecond=0)
             punch_out_dt = punch_in_dt + timedelta(minutes=remaining_minutes)
             punch_out_time = punch_out_dt.strftime('%H:%M:%S')
-
+            
             # Add manual punches
             manual_punch_in_doc = frappe.get_doc({
                 'doctype': 'Biometric Manual Punch',
                 'employee': employee_no,
-                'punch_date': yesterday_date,
+                'punch_date': target_date,
                 'punch_time': punch_in_time,
             })
             manual_punch_in_doc.insert(ignore_permissions=True)
-
+            
             manual_punch_out_doc = frappe.get_doc({
                 'doctype': 'Biometric Manual Punch',
                 'employee': employee_no,
-                'punch_date': yesterday_date,
+                'punch_date': target_date,
                 'punch_time': punch_out_time,
             })
             manual_punch_out_doc.insert(ignore_permissions=True)
@@ -372,7 +400,7 @@ def update_manual_punch_for_employee():
                 'status': 'success',
                 'message': f"Manual punches added for employee {employee_no}: {punch_in_time} and {punch_out_time}"
             }
-
+            
         # If total time is more than 1 hour, find longest duration to break
         elif total_minutes > 60:
             excess_minutes = total_minutes - 60
@@ -399,15 +427,15 @@ def update_manual_punch_for_employee():
                 manual_punch_in_doc = frappe.get_doc({
                     'doctype': 'Biometric Manual Punch',
                     'employee': employee_no,
-                    'punch_date': yesterday_date,
+                    'punch_date': target_date,
                     'punch_time': manual_punch_in_dt.strftime('%H:%M:%S'),
                 })
                 manual_punch_in_doc.insert(ignore_permissions=True)
-
+                
                 manual_punch_out_doc = frappe.get_doc({
                     'doctype': 'Biometric Manual Punch',
                     'employee': employee_no,
-                    'punch_date': yesterday_date,
+                    'punch_date': target_date,
                     'punch_time': manual_punch_out_dt.strftime('%H:%M:%S'),
                 })
                 manual_punch_out_doc.insert(ignore_permissions=True)
@@ -419,16 +447,16 @@ def update_manual_punch_for_employee():
                     'status': 'success',
                     'message': f"Manual punches added at {manual_punch_in_dt.strftime('%H:%M')} and {manual_punch_out_dt.strftime('%H:%M')}, reducing time to 60 minutes."
                 }
-
+                
         update_all_manual_punches()
         return {
             'status': 'success',
             'message': f"No manual punch needed. Total working time is {total_minutes} minutes."
         }
-
+        
     except Exception as e:
         return {'status': 'error', 'message': f"Error updating manual punch: {str(e)}"}
-
+        
 def parse_time(time_value):
     """Helper function to parse time strings or timedelta objects into datetime objects."""
     if isinstance(time_value, str):
