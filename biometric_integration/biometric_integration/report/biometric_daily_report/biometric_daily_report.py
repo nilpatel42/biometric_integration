@@ -97,6 +97,7 @@ def execute(filters=None):
             
             if len(punches) % 2 != 0:
                 total_duration_formatted = "Check"
+                row_indicators["total_duration"] = "#ffff00"
             else:
                 total_minutes = calculate_total_minutes(punches)
                 total_duration_formatted = format_minutes_to_hhmm(total_minutes)
