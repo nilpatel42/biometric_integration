@@ -6,7 +6,7 @@ def execute(filters=None):
     columns = [
         {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 200, "align": "left"},
         {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 65, "align": "center"},
-        {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 75, "align": "center"}
+        {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 80, "align": "center"}
     ]
     
     if not filters or not filters.get('date'):
@@ -96,12 +96,12 @@ def execute(filters=None):
             row_data["employee_id"] = employee.attendance_device_id
             
             if len(punches) % 2 != 0:
-                total_duration_formatted = "Check"
+                total_duration_formatted = "Check -->"
                 row_indicators["total_duration"] = "#ffff00"
             else:
                 total_minutes = calculate_total_minutes(punches)
                 total_duration_formatted = format_minutes_to_hhmm(total_minutes)
-                if total_duration_formatted != "Check":
+                if total_duration_formatted != "Check -->":
                     valid_minutes.append(total_minutes)
             
             row_data["total_duration"] = total_duration_formatted

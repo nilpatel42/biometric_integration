@@ -36,10 +36,10 @@ def execute(filters=None):
     # Add total column
     if total_hours_hh_mm != 0:
         columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
-
     columns.append({"fieldname": "total_duration_decimal", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"})
     
     # Get all employees within date range with employee details based on attendance_device_id match
+    # Modified to include inactive employees who have punch data
     employees = frappe.db.sql("""
         SELECT DISTINCT 
             bal.employee_no,
@@ -47,13 +47,13 @@ def execute(filters=None):
             e.employee_name,
             e.department,
             e.attendance_device_id,
-            d.name,
+            d.name as department_id,
             d.department_name
         FROM `tabBiometric Attendance Log` bal
         LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
         LEFT JOIN `tabDepartment` d ON e.department = d.name        
         WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
-        AND e.status = 'Active'
+        AND e.name IS NOT NULL
     """, {
         "from_date": filters.get('date_range')[0],
         "to_date": filters.get('date_range')[1]
@@ -78,6 +78,7 @@ def execute(filters=None):
             "employee_id": employee.employee_no,
         }
         total_employee_duration = timedelta()
+        has_valid_punches = False
         
         # Loop through each date in the selected range
         for date in date_list:
@@ -97,6 +98,7 @@ def execute(filters=None):
             valid_durations = []
             
             for log in attendance_logs:
+                # Fetch punches
                 punches = frappe.db.sql("""
                     SELECT at.punch_time
                     FROM `tabBiometric Attendance Punch Table` at
@@ -104,10 +106,20 @@ def execute(filters=None):
                     ORDER BY at.punch_time
                 """, {"log_name": log.name}, as_dict=True)
                 
-                if len(punches) % 2 == 0 and punches:
+                # Skip if no punches exist
+                if not punches:
+                    continue
+                
+                # Make decisions about punches
+                if len(punches) >= 2:  # Need at least one in-out pair
+                    # If odd number of punches, ignore the last one
+                    if len(punches) % 2 != 0:
+                        punches = punches[:-1]
+                    
                     duration = calculate_total_minutes(punches)
                     if duration > 0:
                         valid_durations.append(duration)
+                        has_valid_punches = True
             
             # Calculate the total duration for the day
             if valid_durations:
@@ -122,12 +134,15 @@ def execute(filters=None):
         # Format total duration for the employee
         row["total_duration"] = format_minutes_to_hhmm(int(total_employee_duration.total_seconds() / 60))
         row["total_duration_decimal"] = format_decimal_duration(total_employee_duration)
-        data.append(row)
+        
+        # Only add employee to data if they have at least one valid punch
+        if has_valid_punches:
+            data.append(row)
     
     # Calculate totals for each date and overall
     total_row = {
         "employee_name": "Total",
-        "employee_id": len(employees),
+        "employee_id": len(data),  # Update count to reflect actual number of employees with punches
     }
     total_minutes_all = 0
     
@@ -149,6 +164,7 @@ def execute(filters=None):
     hours_all = total_minutes_all // 60
     minutes_all = total_minutes_all % 60
     total_row["total_duration"] = f"{hours_all:02d}:{minutes_all:02d}"
+    total_row["total_duration_decimal"] = f"{hours_all + (minutes_all / 60):.2f}"
     
     data.append(total_row)
     
