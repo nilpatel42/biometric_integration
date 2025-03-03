@@ -1,15 +1,15 @@
 {
  "actions": [],
  "allow_copy": 1,
- "creation": "2025-02-11 19:05:36.004485",
+ "creation": "2025-03-02 11:22:38.650535",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "employee_no",
-  "event_date",
+  "date",
   "section_break_srot",
-  "punch_table"
+  "leave_time_table"
  ],
  "fields": [
   {
@@ -19,32 +19,32 @@
    "set_only_once": 1
   },
   {
-   "fieldname": "event_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "in_preview": 1,
-   "in_standard_filter": 1,
-   "label": "Event Date",
-   "set_only_once": 1
-  },
-  {
    "fieldname": "section_break_srot",
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "punch_table",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "leave_time_table",
    "fieldtype": "Table",
-   "label": "Punch Table",
-   "options": "Biometric Attendance Punch Table"
+   "label": "Leave Time Table",
+   "options": "Biometric Attendance Leave Table"
   }
  ],
- "in_create": 1,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-02 16:36:21.862226",
+ "modified": "2025-03-02 14:07:27.482646",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
- "name": "Biometric Attendance Log",
+ "name": "Attendance Leave Log",
  "owner": "Administrator",
  "permissions": [
   {

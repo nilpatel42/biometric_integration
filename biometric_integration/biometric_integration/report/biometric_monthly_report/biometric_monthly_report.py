@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_DOWN
 
 def execute(filters=None):
     if not filters or not filters.get('date_range'):
@@ -192,5 +193,7 @@ def format_minutes_to_hhmm(minutes):
 def format_decimal_duration(duration):
     total_minutes = int(duration.total_seconds() // 60)
     hours = total_minutes // 60
-    minutes_fraction = (total_minutes % 60) / 60  # Convert remaining minutes to fraction
-    return f"{hours + minutes_fraction:.2f}"
+    minutes_fraction = total_minutes % 60 / 60  # Convert remaining minutes to fraction
+    
+    result = hours + minutes_fraction  # Sum both values
+    return f"{result:.4f}"  # Format to exactly 4 decimal places

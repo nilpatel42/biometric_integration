@@ -52,13 +52,34 @@ frappe.ui.form.on('Biometric Integration Settings', {
 frappe.ui.form.on('Biometric Integration Settings', {
     refresh: function(frm) {
         frm.add_custom_button(__('Update Manual Punch for Maganbhai'), function() {
-            // Call the server-side method to update the manual punch
-            frappe.call({
-                method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_manual_punch_for_employee',
-                callback: function(response) {
-                    frappe.msgprint(response.message);
+            // Create a dialog to ask for a date
+            let d = new frappe.ui.Dialog({
+                title: 'Select Date',
+                fields: [
+                    {
+                        label: 'Date',
+                        fieldname: 'target_date',
+                        fieldtype: 'Date',
+                        reqd: 1
+                    }
+                ],
+                primary_action_label: 'Update',
+                primary_action(values) {
+                    // Call the server-side method with selected date
+                    frappe.call({
+                        method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_manual_punch_for_employee',
+                        args: {
+                            target_date: values.target_date
+                        },
+                        callback: function(response) {
+                            frappe.msgprint(response.message);
+                        }
+                    });
+                    d.hide();
                 }
             });
+            d.show();
         });
     }
 });
+

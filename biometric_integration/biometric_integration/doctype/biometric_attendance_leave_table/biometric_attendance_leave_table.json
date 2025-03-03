@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "creation": "2025-03-02 11:23:24.747914",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "column_break_dkef",
+  "leave_time_from",
+  "leave_time_to",
+  "column_break_cgud",
+  "leave_approver",
+  "column_break_xlna"
+ ],
+ "fields": [
+  {
+   "fieldname": "column_break_dkef",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_cgud",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_xlna",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 3,
+   "fieldname": "leave_time_from",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Leave Time From"
+  },
+  {
+   "columns": 3,
+   "fieldname": "leave_time_to",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Leave Time To"
+  },
+  {
+   "columns": 4,
+   "fieldname": "leave_approver",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Leave Approver",
+   "options": "\nAuto\nManual",
+   "set_only_once": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-03-02 11:25:35.974877",
+ "modified_by": "Administrator",
+ "module": "Biometric Integration",
+ "name": "Biometric Attendance Leave Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
