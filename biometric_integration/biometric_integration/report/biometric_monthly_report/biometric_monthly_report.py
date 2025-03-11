@@ -1,16 +1,44 @@
 import frappe
 from frappe import _
+from calendar import monthrange
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
 
+@frappe.whitelist()
+def get_attendance_years():
+    """Return list of years for which attendance records exist."""
+    years = frappe.db.sql("""
+        SELECT DISTINCT YEAR(event_date) as attendance_year
+        FROM `tabBiometric Attendance Log`
+        ORDER BY attendance_year DESC
+    """)
+    return "\n".join([str(year[0]) for year in years]) or \
+        "\n".join([str(year) for year in range(datetime.now().year, datetime.now().year - 5, -1)])
+
 def execute(filters=None):
-    if not filters or not filters.get('date_range'):
-        frappe.throw(_('Please select Date Range'))
+    if not filters:
+        frappe.throw(_('Please select Month and Year'))
     
+    if not filters.get('month') or not filters.get('year'):
+        frappe.throw(_('Please select Month and Year'))
+
     total_hours_hh_mm = filters.get('total_hours_hh_mm', False)
     
-    from_date = datetime.strptime(filters.get('date_range')[0], '%Y-%m-%d')
-    to_date = datetime.strptime(filters.get('date_range')[1], '%Y-%m-%d')
+    # Convert month and year to date range
+    month = int(filters.get('month'))
+    year = int(filters.get('year'))
+    days_in_month = monthrange(year, month)[1]
+    
+    from_date = datetime(year, month, 1)
+    to_date = datetime(year, month, days_in_month)
+    
+    # Format dates for SQL queries
+    from_date_str = from_date.strftime('%Y-%m-%d')
+    to_date_str = to_date.strftime('%Y-%m-%d')
+    
+    # Create filter dict with date range for downstream processing
+    filters['date_range'] = [from_date_str, to_date_str]
+    filters['total_hours_hh_mm'] = True
     
     # Create columns for employee details
     columns = [
@@ -34,14 +62,25 @@ def execute(filters=None):
         date_list.append(current_date)
         current_date += timedelta(days=1)
     
-    # Add total column
-    if total_hours_hh_mm != 0:
+    # Add total columns
+    if total_hours_hh_mm:
         columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
+        
     columns.append({"fieldname": "total_duration_decimal", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"})
     
+    # Build employee filter for the query
+    employee_filter = ""
+    employee_params = {
+        "from_date": from_date_str,
+        "to_date": to_date_str
+    }
+    
+    if filters.get('employee'):
+        employee_filter = "AND e.name = %(employee)s"
+        employee_params["employee"] = filters.get('employee')
+    
     # Get all employees within date range with employee details based on attendance_device_id match
-    # Modified to include inactive employees who have punch data
-    employees = frappe.db.sql("""
+    employees = frappe.db.sql(f"""
         SELECT DISTINCT 
             bal.employee_no,
             e.name as employee,
@@ -55,10 +94,8 @@ def execute(filters=None):
         LEFT JOIN `tabDepartment` d ON e.department = d.name        
         WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
         AND e.name IS NOT NULL
-    """, {
-        "from_date": filters.get('date_range')[0],
-        "to_date": filters.get('date_range')[1]
-    }, as_dict=True)
+        {employee_filter}
+    """, employee_params, as_dict=True)
     
     # Sort employees by their employee number
     def natural_sort_key(emp):
