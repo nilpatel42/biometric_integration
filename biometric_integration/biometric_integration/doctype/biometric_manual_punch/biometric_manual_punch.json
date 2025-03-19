@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_copy": 1,
  "allow_import": 1,
  "creation": "2025-02-11 19:06:40.451938",
  "default_view": "List",
@@ -40,6 +39,7 @@
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Punch Time",
+   "no_copy": 1,
    "reqd": 1
   },
   {
@@ -55,7 +55,7 @@
  "icon": "fa fa-superpowers",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-17 19:23:29.580922",
+ "modified": "2025-03-17 16:34:35.943442",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Manual Punch",
