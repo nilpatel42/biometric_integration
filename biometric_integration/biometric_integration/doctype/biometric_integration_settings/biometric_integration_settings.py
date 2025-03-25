@@ -276,25 +276,6 @@ def update_manual_punch_for_employee(target_date):
                 'message': f"Manual punches already exist for employee {employee_no} on {target_date}. Skipping duplicate entry."
             }
 
-        # Check if employee 105 has any auto punches for the target date
-        check_query = """
-            SELECT COUNT(*) as punch_count
-            FROM `tabBiometric Attendance Log`
-            WHERE employee_no = %s AND event_date = %s
-        """
-        check_result = frappe.db.sql(check_query, (employee_id, target_date), as_dict=True)
-        has_auto_punches = check_result[0]['punch_count'] > 0 if check_result else False
-
-        if not has_auto_punches:
-            update_all_manual_punches()
-            return {
-                'status': 'success',
-                'message': f"No auto punches found for employee {employee_no} on {target_date}. Skipping 1-hour calculation."
-            }
-
-        # Lists to store punch times
-        punch_records = []
-
         # Get system punches
         query = """
             SELECT name 
@@ -303,6 +284,8 @@ def update_manual_punch_for_employee(target_date):
         """
         attendance_logs = frappe.db.sql(query, (employee_id, target_date), as_dict=True)
 
+        # Collect punch records
+        punch_records = []
         for log in attendance_logs:
             attendance_doc = frappe.get_doc('Biometric Attendance Log', log['name'])
             if not attendance_doc.punch_table:
@@ -315,6 +298,7 @@ def update_manual_punch_for_employee(target_date):
         # Sort punches by time
         punch_records.sort(key=lambda x: x[0])
 
+        # Calculate total working minutes and punch pairs
         total_minutes = 0
         punch_pairs = []
         current_in = None
@@ -328,14 +312,45 @@ def update_manual_punch_for_employee(target_date):
                 punch_pairs.append((current_in, time))
                 current_in = None
 
-        if total_minutes == 60:
+        # Handle scenario with more than 60 minutes
+        if total_minutes > 60:
+            # Calculate total excess minutes
+            remaining_minutes = total_minutes - 60
+            last_auto_punch_in, last_auto_punch_out = punch_pairs[-1]
+            first_manual_punch_time = last_auto_punch_in + timedelta(minutes=10)
+            second_manual_punch_time = first_manual_punch_time + timedelta(minutes=remaining_minutes)
+
+            # Insert manual punches
+            manual_punch_1_doc = frappe.get_doc({
+                'doctype': 'Biometric Manual Punch',
+                'employee': employee_no,
+                'punch_date': target_date,
+                'punch_time': first_manual_punch_time.strftime('%H:%M:%S'),
+            })
+            manual_punch_1_doc.insert(ignore_permissions=True)
+
+            manual_punch_2_doc = frappe.get_doc({
+                'doctype': 'Biometric Manual Punch',
+                'employee': employee_no,
+                'punch_date': target_date,
+                'punch_time': second_manual_punch_time.strftime('%H:%M:%S'),
+            })
+            manual_punch_2_doc.insert(ignore_permissions=True)
+
+            frappe.db.commit()
+            update_all_manual_punches()
+
+            return {
+                'status': 'success',
+                'message': f"Manual punches added for employee {employee_no}: {first_manual_punch_time.strftime('%H:%M:%S')} and {second_manual_punch_time.strftime('%H:%M:%S')}"
+            }
+        elif total_minutes == 60:
             update_all_manual_punches()
             return {
                 'status': 'success',
                 'message': f"No manual punch needed. Total working time is already 60 minutes."
             }
-
-        if total_minutes < 60:
+        elif total_minutes < 60:
             remaining_minutes = 60 - total_minutes
             punch_in_time = "08:00:00"
             punch_in_dt = datetime.strptime(punch_in_time, '%H:%M:%S').replace(second=0, microsecond=0)
@@ -366,12 +381,12 @@ def update_manual_punch_for_employee(target_date):
                 'status': 'success',
                 'message': f"Manual punches added for employee {employee_no}: {punch_in_time} and {punch_out_time}"
             }
-
-        update_all_manual_punches()
-        return {
-            'status': 'success',
-            'message': f"No manual punch needed. Total working time is {total_minutes} minutes."
-        }
+        else:
+            update_all_manual_punches()
+            return {
+                'status': 'success',
+                'message': f"Cannot adjust time. Total working time is {total_minutes} minutes."
+            }
 
     except Exception as e:
         return {'status': 'error', 'message': f"Error updating manual punch: {str(e)}"}
