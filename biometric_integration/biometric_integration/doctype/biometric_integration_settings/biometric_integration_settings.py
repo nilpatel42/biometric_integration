@@ -298,6 +298,13 @@ def update_manual_punch_for_employee(target_date):
         # Sort punches by time
         punch_records.sort(key=lambda x: x[0])
 
+        # Check if there are at least two auto punches - NEW CONDITION
+        if len(punch_records) < 2:
+            return {
+                'status': 'skipped',
+                'message': f"Not enough auto punches for employee {employee_no} on {target_date}. Need at least 2 auto punches."
+            }
+
         # Calculate total working minutes and punch pairs
         total_minutes = 0
         punch_pairs = []
