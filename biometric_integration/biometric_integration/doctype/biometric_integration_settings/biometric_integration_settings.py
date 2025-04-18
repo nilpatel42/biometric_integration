@@ -134,17 +134,12 @@ def sync_attendance():
                     print(f"Punch for employee {emp_no} at {event_datetime.time()} already exists.")
             position += len(events)
 
-            progress = (position / total_records) * 100
-            frappe.publish_progress(progress, title='Attendance Sync', description=f"Processed {position} of {total_records} records so far...")
-
             if len(events) < batch_size:
                 break
 
         frappe.db.commit()
-        frappe.publish_progress(100, title='Attendance Sync', description=f"{count} attendance records synced successfully. {skipped} duplicate punches skipped.")
         return f"{count} attendance records synced successfully. {skipped} duplicate punches skipped."
     except Exception as e:
-        frappe.publish_progress(100, title='Attendance Sync', description=f"Error syncing attendance: {str(e)}")
         frappe.throw(f"Error syncing attendance: {str(e)}")
 
 

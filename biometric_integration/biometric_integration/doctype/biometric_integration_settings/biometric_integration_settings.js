@@ -13,17 +13,25 @@ frappe.ui.form.on("Biometric Integration Settings", {
         frm.add_custom_button(__('Sync Attendance'), function() {
             frappe.call({
                 method: "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.sync_attendance",
+                freeze: true,
+                freeze_message: "Syncing Attendance...",
                 callback: function(r) {
+                    frappe.hide_progress();
+
                     if (r.message) {
-                        frappe.msgprint(r.message);
-                        frm.reload_doc();
+                        // Show green alert on success
+                        frappe.show_alert({
+                            message: __(r.message),
+                            indicator: 'green'
+                        });
                     }
                 }
             });
-            
-        });        
+        });
     }
 });
+
+
 
 frappe.ui.form.on('Biometric Integration Settings', {
     refresh: function(frm) {
@@ -36,12 +44,18 @@ frappe.ui.form.on('Biometric Integration Settings', {
                     frappe.call({
                         method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_all_manual_punches',
                         callback: function(response) {
-                            frappe.msgprint(response.message);
+                            frappe.show_alert({
+                                message: __(response.message),
+                                indicator: 'green'
+                            });
                         }
                     });
                 },
                 function() {
-                    frappe.msgprint(__('Action canceled.'));
+                    frappe.show_alert({
+                        message: __('Action Canceled'),
+                        indicator: 'yellow'
+                    });
                 }
             );
         });
