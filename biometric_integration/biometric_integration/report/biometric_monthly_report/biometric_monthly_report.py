@@ -2,7 +2,6 @@ import frappe
 from frappe import _
 from calendar import monthrange
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_DOWN
 
 @frappe.whitelist()
 def get_attendance_years():
@@ -79,44 +78,64 @@ def execute(filters=None):
         employee_filter = "AND e.name = %(employee)s"
         employee_params["employee"] = filters.get('employee')
     
-    # Get all employees within date range with employee details based on attendance_device_id match
+    # Get ALL employees except inactive ones, regardless of attendance logs
+    employee_query = ""
+    if filters.get('employee'):
+        employee_query = "AND e.name = %(employee)s"
+    
     employees = frappe.db.sql(f"""
         SELECT DISTINCT 
-            bal.employee_no,
+            e.attendance_device_id as employee_no,
             e.name as employee,
             e.employee_name,
             e.department,
             e.attendance_device_id,
+            e.status,
             d.name as department_id,
             d.department_name
-        FROM `tabBiometric Attendance Log` bal
-        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
-        LEFT JOIN `tabDepartment` d ON e.department = d.name        
-        WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
-        AND e.name IS NOT NULL
-        {employee_filter}
+        FROM `tabEmployee` e
+        LEFT JOIN `tabDepartment` d ON e.department = d.name
+        WHERE e.status = 'Active'
+        {employee_query}
     """, employee_params, as_dict=True)
     
     # Sort employees by their employee number
     def natural_sort_key(emp):
-        try:
-            return int(emp["employee_no"])
-        except ValueError:
-            return emp["employee_no"]
+        # Handle None/NULL values
+        if not emp["employee_no"]:
+            return ""
+        
+        # Convert all to string to avoid type comparison issues
+        emp_no = str(emp["employee_no"])
+        
+        # Try to extract digits if it's a mixed string
+        digits = ''.join(c for c in emp_no if c.isdigit())
+        
+        if digits and emp_no == digits:  # Pure numeric string
+            return int(digits)
+        elif digits:  # Mixed string with some digits
+            return (0, emp_no)  # Place mixed strings before pure numeric
+        else:  # No digits at all
+            return (0, emp_no)
     
-    employees.sort(key=natural_sort_key)
+    # Use try-except in case sorting fails
+    try:
+        employees.sort(key=natural_sort_key)
+    except Exception:
+        # Fallback to simple string sorting if natural sort fails
+        employees.sort(key=lambda emp: str(emp.get("employee_no") or ""))
     
     data = []
     
     # Process each employee's attendance
     for employee in employees:
+        # We already filtered out inactive employees in the SQL query
         row = {
             "employee_name": employee.employee_name,
             "employee_department": employee.department_name,
             "employee_id": employee.employee_no,
         }
         total_employee_duration = timedelta()
-        has_valid_punches = False
         
         # Loop through each date in the selected range
         for date in date_list:
@@ -157,7 +176,6 @@ def execute(filters=None):
                     duration = calculate_total_minutes(punches)
                     if duration > 0:
                         valid_durations.append(duration)
-                        has_valid_punches = True
             
             # Calculate the total duration for the day
             if valid_durations:
@@ -173,14 +191,13 @@ def execute(filters=None):
         row["total_duration"] = format_minutes_to_hhmm(int(total_employee_duration.total_seconds() / 60))
         row["total_duration_decimal"] = format_decimal_duration(total_employee_duration)
         
-        # Only add employee to data if they have at least one valid punch
-        if has_valid_punches:
-            data.append(row)
+        # Include all active employees
+        data.append(row)
     
     # Calculate totals for each date and overall
     total_row = {
         "employee_name": "Total",
-        "employee_id": len(data),  # Update count to reflect actual number of employees with punches
+        "employee_id": len(data),  # Count of active employees included in the report
     }
     total_minutes_all = 0
     
@@ -189,7 +206,7 @@ def execute(filters=None):
         total_minutes = 0
         
         for row in data:
-            if row[date_key] != "00:00":
+            if row.get(date_key) and row[date_key] != "00:00":
                 hours, minutes = map(int, row[date_key].split(':'))
                 total_minutes += hours * 60 + minutes
         
