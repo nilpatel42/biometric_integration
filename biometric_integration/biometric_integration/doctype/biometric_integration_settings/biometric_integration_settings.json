@@ -16,16 +16,19 @@
  ],
  "fields": [
   {
+   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "ip",
    "fieldtype": "Data",
    "label": "IP"
   },
   {
+   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "username",
    "fieldtype": "Data",
    "label": "Username"
   },
   {
+   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "password",
    "fieldtype": "Password",
    "label": "Password"
@@ -49,11 +52,12 @@
    "fieldtype": "Column Break"
   }
  ],
+ "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-02-15 10:32:03.806604",
+ "modified": "2025-07-30 09:45:06.543032",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",
@@ -68,8 +72,19 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "CE HR",
+   "share": 1,
+   "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []
