@@ -17,11 +17,12 @@ def execute(filters=None):
     
     columns[0]["label"] = formatted_date
     
-    # Get all active employees with attendance device IDs
+    # Get all active employees with attendance device IDs and employment type
     all_active_employees = frappe.db.sql("""
         SELECT 
             employee_name,
-            attendance_device_id
+            attendance_device_id,
+            employment_type
         FROM 
             tabEmployee
         WHERE 
@@ -32,11 +33,12 @@ def execute(filters=None):
             attendance_device_id
     """, as_dict=True)
     
-    # Get employees who had at least one punch that day
+    # Get employees who had at least one punch that day with employment type
     present_employees = frappe.db.sql("""
         SELECT DISTINCT 
             e.employee_name,
-            e.attendance_device_id
+            e.attendance_device_id,
+            e.employment_type
         FROM `tabBiometric Attendance Log` bal
         JOIN `tabBiometric Attendance Punch Table` punch ON punch.parent = bal.name
         JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
@@ -67,6 +69,34 @@ def execute(filters=None):
         total_seconds = timedelta_obj.total_seconds()
         hours = total_seconds / 3600
         return start_hour <= hours < end_hour
+    
+    def check_early_leave(last_punch_time, employment_type):
+        """Check if employee left early based on employment type"""
+        if not last_punch_time or not employment_type:
+            return ""
+            
+        # Convert timedelta to total seconds for comparison
+        punch_seconds = last_punch_time.total_seconds()
+        
+        # Define expected end times with 30-minute tolerance (in seconds)
+        end_times = {
+            "Full Time": 20 * 3600,    # 8:00 PM = 20:00
+            "Mid Shift": 19 * 3600,    # 7:00 PM = 19:00
+            "Early Shift": 18 * 3600   # 6:00 PM = 18:00
+        }
+        
+        # 30 minutes tolerance = 30 * 60 = 1800 seconds
+        tolerance = 30 * 60
+        
+        expected_end = end_times.get(employment_type)
+        if expected_end is None:
+            return ""
+            
+        # If punch time is before (expected_end - tolerance), it's early leave
+        if punch_seconds < (expected_end - tolerance):
+            return "0"
+        else:
+            return ""
     
     # Process present employees
     for employee in present_employees:
@@ -105,6 +135,18 @@ def execute(filters=None):
                     valid_minutes.append(total_minutes)
             
             row_data["total_duration"] = total_duration_formatted
+            
+            # Check for early leave
+            if punches:
+                last_punch = punches[-1]["punch_time"]
+                early_leave_status = check_early_leave(last_punch, employee.employment_type)
+                row_data["early_leave"] = early_leave_status
+                
+                # Highlight early leave in red
+                if early_leave_status == "0":
+                    row_indicators["early_leave"] = "red"
+            else:
+                row_data["early_leave"] = ""
             
             # Check for <-- Check punch condition
             if len(punches) == 2:
@@ -150,6 +192,15 @@ def execute(filters=None):
             "align": "center"
         })
     
+    # Add early leave column as last column
+    columns.append({
+        "fieldname": "early_leave",
+        "label": _("EL"),
+        "fieldtype": "Data",
+        "width": 80,
+        "align": "center"
+    })
+    
     # Format data for report
     formatted_data = []
     for row in data:
@@ -175,7 +226,8 @@ def execute(filters=None):
     total_row = {
         "employee_name": "Total",
         "employee_id": len(present_employees),
-        "total_duration": total_duration_formatted
+        "total_duration": total_duration_formatted,
+        "early_leave": ""
     }
     
     for i in range(1, max_punches + 1):
@@ -199,6 +251,7 @@ def execute(filters=None):
         absent_row = {field["fieldname"]: None for field in columns}
         absent_row["employee_name"] = employee.employee_name
         absent_row["employee_id"] = employee.attendance_device_id
+        absent_row["early_leave"] = ""
         formatted_data.append(absent_row)
     
     return columns, formatted_data
