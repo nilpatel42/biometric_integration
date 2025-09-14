@@ -354,7 +354,7 @@ def update_manual_punch_for_employee(target_date):
             }
         elif total_minutes < 60:
             remaining_minutes = 60 - total_minutes
-            punch_in_time = "08:00:00"
+            punch_in_time = "06:00:00"
             punch_in_dt = datetime.strptime(punch_in_time, '%H:%M:%S').replace(second=0, microsecond=0)
             punch_out_dt = punch_in_dt + timedelta(minutes=remaining_minutes)
             punch_out_time = punch_out_dt.strftime('%H:%M:%S')

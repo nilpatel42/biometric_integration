@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns = [
-        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 200, "align": "left"},
-        {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 65, "align": "center"},
-        {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 80, "align": "center"}
+        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 300, "align": "left"},
+        {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 100, "align": "center"},
+        {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"}
     ]
     
     if not filters or not filters.get('date'):
@@ -98,7 +98,64 @@ def execute(filters=None):
         else:
             return ""
     
-    # Process present employees
+    # First pass: determine max_punches
+    for employee in present_employees:
+        attendance_logs = frappe.db.sql("""
+            SELECT al.name, al.event_date
+            FROM `tabBiometric Attendance Log` al
+            WHERE al.employee_no = %(employee_no)s AND al.event_date = %(selected_date)s
+            ORDER BY al.event_date
+        """, {"employee_no": employee.attendance_device_id, "selected_date": selected_date}, as_dict=True)
+        
+        for log in attendance_logs:
+            punches = frappe.db.sql("""
+                SELECT at.punch_time, at.punch_type
+                FROM `tabBiometric Attendance Punch Table` at
+                WHERE at.parent = %(log_name)s
+                ORDER BY at.punch_time
+            """, {"log_name": log.name}, as_dict=True)
+            
+            # Skip this log if there are no punches
+            if not punches:
+                continue
+            
+            # Check for <-- Check punch condition
+            if len(punches) == 2:
+                first_punch = punches[0]["punch_time"]
+                second_punch = punches[1]["punch_time"]
+                
+                # First punch should be between 7 AM and 10 AM
+                first_punch_valid = is_time_between(first_punch, 7, 10)
+                # Second punch should be between 7 PM and 10 PM
+                second_punch_valid = is_time_between(second_punch, 19, 22)
+                
+                if first_punch_valid and second_punch_valid:
+                    # Add "<-- Check" as third punch
+                    punches.append({"punch_time": None, "punch_type": "<-- Check"})
+            
+            max_punches = max(max_punches, len(punches))
+    
+    # Add punch columns FIRST - before processing data
+    punch_column_width = 100
+    for i in range(1, max_punches + 1):
+        columns.append({
+            "fieldname": f"punch_{i}",
+            "label": _("Punch " + str(i)),
+            "fieldtype": "Data",
+            "width": punch_column_width,
+            "align": "center"
+        })
+    
+    # Add early leave column as THE LAST column - AFTER all punch columns
+    columns.append({
+        "fieldname": "early_leave",
+        "label": _("Early Leave"),
+        "fieldtype": "Data",
+        "width": 100,
+        "align": "center"
+    })
+    
+    # Second pass: Process data with correct column structure
     for employee in present_employees:
         attendance_logs = frappe.db.sql("""
             SELECT al.name, al.event_date
@@ -136,32 +193,21 @@ def execute(filters=None):
             
             row_data["total_duration"] = total_duration_formatted
             
-            # Check for early leave
-            if punches:
-                last_punch = punches[-1]["punch_time"]
-                early_leave_status = check_early_leave(last_punch, employee.employment_type)
-                row_data["early_leave"] = early_leave_status
-                
-                # Highlight early leave in red
-                if early_leave_status == "0":
-                    row_indicators["early_leave"] = "red"
-            else:
-                row_data["early_leave"] = ""
-            
             # Check for <-- Check punch condition
             if len(punches) == 2:
                 first_punch = punches[0]["punch_time"]
                 second_punch = punches[1]["punch_time"]
                 
-                # First punch should be between 7 AM (7 hours = 25200 seconds) and 10 AM (10 hours = 36000 seconds)
+                # First punch should be between 7 AM and 10 AM
                 first_punch_valid = is_time_between(first_punch, 7, 10)
-                # Second punch should be between 7 PM (19 hours = 68400 seconds) and 10 PM (22 hours = 79200 seconds)
+                # Second punch should be between 7 PM and 10 PM
                 second_punch_valid = is_time_between(second_punch, 19, 22)
                 
                 if first_punch_valid and second_punch_valid:
                     # Add "<-- Check" as third punch
                     punches.append({"punch_time": None, "punch_type": "<-- Check"})
             
+            # Process all punches first
             for i, punch in enumerate(punches, 1):
                 punch_field = f"punch_{i}"
                 if punch.get("punch_type") == "<-- Check":
@@ -175,31 +221,31 @@ def execute(filters=None):
                     else:
                         row_data[punch_field] = formatted_time
             
-            max_punches = max(max_punches, len(punches))
+            # Fill empty punch columns with None
+            for i in range(len(punches) + 1, max_punches + 1):
+                row_data[f"punch_{i}"] = None
+            
+            # Process early leave AFTER all punches are processed
+            if punches:
+                # Get the actual last punch (not the "<-- Check" one)
+                actual_punches = [p for p in punches if p.get("punch_type") != "<-- Check"]
+                if actual_punches:
+                    last_punch = actual_punches[-1]["punch_time"]
+                    early_leave_status = check_early_leave(last_punch, employee.employment_type)
+                    row_data["early_leave"] = early_leave_status
+                    
+                    # Highlight early leave in red
+                    if early_leave_status == "0":
+                        row_indicators["early_leave"] = "red"
+                else:
+                    row_data["early_leave"] = ""
+            else:
+                row_data["early_leave"] = ""
+            
             data.append({
                 "data": row_data,
                 "indicators": row_indicators
             })
-    
-    # Add punch columns
-    punch_column_width = 95
-    for i in range(1, max_punches + 1):
-        columns.append({
-            "fieldname": f"punch_{i}",
-            "label": _("Punch " + str(i)),
-            "fieldtype": "Data",
-            "width": punch_column_width,
-            "align": "center"
-        })
-    
-    # Add early leave column as last column
-    columns.append({
-        "fieldname": "early_leave",
-        "label": _("EL"),
-        "fieldtype": "Data",
-        "width": 80,
-        "align": "center"
-    })
     
     # Format data for report
     formatted_data = []
@@ -211,11 +257,6 @@ def execute(filters=None):
                 '''<span style="color: {{ color }}">{{ value }}</span>''',
                 {"value": row_data[field], "color": color}
             )
-        
-        for i in range(1, max_punches + 1):
-            field = f"punch_{i}"
-            if field not in row_data:
-                row_data[field] = None
         
         formatted_data.append(row_data)
     
@@ -230,6 +271,7 @@ def execute(filters=None):
         "early_leave": ""
     }
     
+    # Fill punch columns in total row
     for i in range(1, max_punches + 1):
         total_row[f"punch_{i}"] = None
     
@@ -252,6 +294,9 @@ def execute(filters=None):
         absent_row["employee_name"] = employee.employee_name
         absent_row["employee_id"] = employee.attendance_device_id
         absent_row["early_leave"] = ""
+        # Fill punch columns for absent employees
+        for i in range(1, max_punches + 1):
+            absent_row[f"punch_{i}"] = None
         formatted_data.append(absent_row)
     
     return columns, formatted_data
