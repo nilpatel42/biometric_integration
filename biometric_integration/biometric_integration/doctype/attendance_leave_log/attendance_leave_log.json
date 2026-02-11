@@ -43,10 +43,11 @@
    "label": "Leave To"
   }
  ],
+ "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-11 15:34:58.047007",
+ "modified": "2026-02-04 10:05:15.136051",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Attendance Leave Log",
@@ -70,6 +71,7 @@
    "share": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
