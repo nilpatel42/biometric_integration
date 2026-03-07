@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_copy": 1,
  "allow_import": 1,
  "creation": "2025-02-11 19:06:40.451938",
  "default_view": "List",
@@ -33,16 +32,15 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Punch Date",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "fieldname": "punch_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Punch Time",
-   "reqd": 1,
-   "set_only_once": 1
+   "no_copy": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_dfjc",
@@ -54,9 +52,10 @@
   }
  ],
  "hide_toolbar": 1,
+ "icon": "fa fa-superpowers",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-13 11:47:17.292164",
+ "modified": "2026-02-04 10:05:15.271082",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Manual Punch",
@@ -76,7 +75,6 @@
   },
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -87,7 +85,9 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

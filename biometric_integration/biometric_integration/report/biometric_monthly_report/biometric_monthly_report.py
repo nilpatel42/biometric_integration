@@ -1,13 +1,43 @@
 import frappe
 from frappe import _
+from calendar import monthrange
 from datetime import datetime, timedelta
 
+@frappe.whitelist()
+def get_attendance_years():
+    """Return list of years for which attendance records exist."""
+    years = frappe.db.sql("""
+        SELECT DISTINCT YEAR(event_date) as attendance_year
+        FROM `tabBiometric Attendance Log`
+        ORDER BY attendance_year DESC
+    """)
+    return "\n".join([str(year[0]) for year in years]) or \
+        "\n".join([str(year) for year in range(datetime.now().year, datetime.now().year - 5, -1)])
+
 def execute(filters=None):
-    if not filters or not filters.get('date_range'):
-        frappe.throw(_('Please select Date Range'))
+    if not filters:
+        frappe.throw(_('Please select Month and Year'))
     
-    from_date = datetime.strptime(filters.get('date_range')[0], '%Y-%m-%d')
-    to_date = datetime.strptime(filters.get('date_range')[1], '%Y-%m-%d')
+    if not filters.get('month') or not filters.get('year'):
+        frappe.throw(_('Please select Month and Year'))
+
+    total_hours_hh_mm = filters.get('total_hours_hh_mm', False)
+    
+    # Convert month and year to date range
+    month = int(filters.get('month'))
+    year = int(filters.get('year'))
+    days_in_month = monthrange(year, month)[1]
+    
+    from_date = datetime(year, month, 1)
+    to_date = datetime(year, month, days_in_month)
+    
+    # Format dates for SQL queries
+    from_date_str = from_date.strftime('%Y-%m-%d')
+    to_date_str = to_date.strftime('%Y-%m-%d')
+    
+    # Create filter dict with date range for downstream processing
+    filters['date_range'] = [from_date_str, to_date_str]
+    filters['total_hours_hh_mm'] = True
     
     # Create columns for employee details
     columns = [
@@ -31,51 +61,79 @@ def execute(filters=None):
         date_list.append(current_date)
         current_date += timedelta(days=1)
     
-    # Add total column
-    columns.append({
-        "fieldname": "total_duration",
-        "label": _("Total"),
-        "fieldtype": "Data",
-        "width": 100,
-        "align": "center"
-    })
+    # Add total columns
+    if total_hours_hh_mm:
+        columns.append({"fieldname": "total_duration", "label": _("Total"), "fieldtype": "Data", "width": 100, "align": "center"})
+        
+    columns.append({"fieldname": "total_duration_decimal", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"})
     
-    # Get all employees within date range with employee details based on attendance_device_id match
-    employees = frappe.db.sql("""
+    # Build employee filter for the query
+    employee_filter = ""
+    employee_params = {
+        "from_date": from_date_str,
+        "to_date": to_date_str
+    }
+    
+    if filters.get('employee'):
+        employee_filter = "AND e.name = %(employee)s"
+        employee_params["employee"] = filters.get('employee')
+    
+    # Get ALL employees except inactive ones, regardless of attendance logs
+    employee_query = ""
+    if filters.get('employee'):
+        employee_query = "AND e.name = %(employee)s"
+    
+    employees = frappe.db.sql(f"""
         SELECT DISTINCT 
-            bal.employee_no,
+            e.attendance_device_id as employee_no,
             e.name as employee,
             e.employee_name,
             e.department,
             e.attendance_device_id,
-            d.name,
+            e.status,
+            d.name as department_id,
             d.department_name
-        FROM `tabBiometric Attendance Log` bal
-        LEFT JOIN `tabEmployee` e ON e.attendance_device_id = bal.employee_no
-        LEFT JOIN `tabDepartment` d ON e.department = d.name        
-        WHERE bal.event_date BETWEEN %(from_date)s AND %(to_date)s
-    """, {
-        "from_date": filters.get('date_range')[0],
-        "to_date": filters.get('date_range')[1]
-    }, as_dict=True)
+        FROM `tabEmployee` e
+        LEFT JOIN `tabDepartment` d ON e.department = d.name
+        WHERE e.status = 'Active'
+        {employee_query}
+    """, employee_params, as_dict=True)
     
     # Sort employees by their employee number
     def natural_sort_key(emp):
-        try:
-            return int(emp["employee_no"])
-        except ValueError:
-            return emp["employee_no"]
+        # Handle None/NULL values
+        if not emp["employee_no"]:
+            return ""
+        
+        # Convert all to string to avoid type comparison issues
+        emp_no = str(emp["employee_no"])
+        
+        # Try to extract digits if it's a mixed string
+        digits = ''.join(c for c in emp_no if c.isdigit())
+        
+        if digits and emp_no == digits:  # Pure numeric string
+            return int(digits)
+        elif digits:  # Mixed string with some digits
+            return (0, emp_no)  # Place mixed strings before pure numeric
+        else:  # No digits at all
+            return (0, emp_no)
     
-    employees.sort(key=natural_sort_key)
+    # Use try-except in case sorting fails
+    try:
+        employees.sort(key=natural_sort_key)
+    except Exception:
+        # Fallback to simple string sorting if natural sort fails
+        employees.sort(key=lambda emp: str(emp.get("employee_no") or ""))
     
     data = []
     
     # Process each employee's attendance
     for employee in employees:
+        # We already filtered out inactive employees in the SQL query
         row = {
-            "employee_name": employee.employee_name,  # Fetching the name of the employee from Employee Doctype
+            "employee_name": employee.employee_name,
             "employee_department": employee.department_name,
-            "employee_id": employee.employee_no,            
+            "employee_id": employee.employee_no,
         }
         total_employee_duration = timedelta()
         
@@ -97,6 +155,7 @@ def execute(filters=None):
             valid_durations = []
             
             for log in attendance_logs:
+                # Fetch punches
                 punches = frappe.db.sql("""
                     SELECT at.punch_time
                     FROM `tabBiometric Attendance Punch Table` at
@@ -104,29 +163,41 @@ def execute(filters=None):
                     ORDER BY at.punch_time
                 """, {"log_name": log.name}, as_dict=True)
                 
-                if len(punches) % 2 == 0 and punches:
-                    duration = calculate_total_duration(punches)
-                    if duration.total_seconds() > 0:
+                # Skip if no punches exist
+                if not punches:
+                    continue
+                
+                # Make decisions about punches
+                if len(punches) >= 2:  # Need at least one in-out pair
+                    # If odd number of punches, ignore the last one
+                    if len(punches) % 2 != 0:
+                        punches = punches[:-1]
+                    
+                    duration = calculate_total_minutes(punches)
+                    if duration > 0:
                         valid_durations.append(duration)
             
             # Calculate the total duration for the day
             if valid_durations:
-                total_duration = sum(valid_durations, timedelta())
-                formatted_duration = format_duration(total_duration)
-                total_employee_duration += total_duration
+                total_duration = sum(valid_durations)
+                formatted_duration = format_minutes_to_hhmm(total_duration)
+                total_employee_duration += timedelta(minutes=total_duration)
             else:
                 formatted_duration = "00:00"
             
             row[f"duration_{date.strftime('%Y%m%d')}"] = formatted_duration
         
         # Format total duration for the employee
-        row["total_duration"] = format_duration(total_employee_duration)
+        row["total_duration"] = format_minutes_to_hhmm(int(total_employee_duration.total_seconds() / 60))
+        row["total_duration_decimal"] = format_decimal_duration(total_employee_duration)
+        
+        # Include all active employees
         data.append(row)
     
     # Calculate totals for each date and overall
     total_row = {
         "employee_name": "Total",
-        "employee_id": len(employees),
+        "employee_id": len(data),  # Count of active employees included in the report
     }
     total_minutes_all = 0
     
@@ -135,7 +206,7 @@ def execute(filters=None):
         total_minutes = 0
         
         for row in data:
-            if row[date_key] != "00:00":
+            if row.get(date_key) and row[date_key] != "00:00":
                 hours, minutes = map(int, row[date_key].split(':'))
                 total_minutes += hours * 60 + minutes
         
@@ -148,31 +219,35 @@ def execute(filters=None):
     hours_all = total_minutes_all // 60
     minutes_all = total_minutes_all % 60
     total_row["total_duration"] = f"{hours_all:02d}:{minutes_all:02d}"
+    total_row["total_duration_decimal"] = f"{hours_all + (minutes_all / 60):.2f}"
     
     data.append(total_row)
     
     return columns, data
 
-def calculate_total_duration(punches):
-    total_duration = timedelta()
+def calculate_total_minutes(punches):
+    total_minutes = 0
     
     for i in range(0, len(punches) - 1, 2):
         try:
             punch_in = punches[i]["punch_time"]
             punch_out = punches[i + 1]["punch_time"]
-            time_diff = punch_out - punch_in
-            total_duration += time_diff
+            
+            minutes_diff = int(punch_out.total_seconds() / 60) - int(punch_in.total_seconds() / 60)
+            total_minutes += minutes_diff
         except Exception:
-            return timedelta()
+            return 0
     
-    return total_duration
+    return total_minutes
 
-def format_duration(duration):
-    total_seconds = int(duration.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
+def format_minutes_to_hhmm(minutes):
+    hours, mins = divmod(minutes, 60)
+    return f"{hours:02}:{mins:02}"
+
+def format_decimal_duration(duration):
+    total_minutes = int(duration.total_seconds() // 60)
+    hours = total_minutes // 60
+    minutes_fraction = total_minutes % 60 / 60  # Convert remaining minutes to fraction
     
-    if seconds > 30:
-        minutes += 1
-    
-    return f"{hours:02d}:{minutes:02d}"
+    result = hours + minutes_fraction  # Sum both values
+    return f"{result:.4f}"  # Format to exactly 4 decimal places

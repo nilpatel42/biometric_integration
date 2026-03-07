@@ -155,7 +155,7 @@ doc_events = {
 # ---------------
 scheduler_events = {
     "cron": {
-        "0 9 * * *": [
+        "15 8 * * 0-2,4-6": [
             "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.scheduled_attendance_sync"
         ]
     }
@@ -252,3 +252,10 @@ scheduler_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+add_to_apps_screen = [{
+    "name": "biometric_integration",
+    "logo": "/assets/biometric_integration/Biometric.webp",
+    "title": "Biometric",
+    "route": "/app/home",
+    "has_permission": "erpnext.check_app_permission",
+}]
