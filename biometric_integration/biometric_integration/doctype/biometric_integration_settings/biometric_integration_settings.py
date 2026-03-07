@@ -31,6 +31,17 @@ def _build_device_datetime_range(start_date, end_date):
     )
 
 
+def _get_device_password(settings):
+    try:
+        return settings.get_password("password")
+    except Exception as e:
+        frappe.log_error(f"Password decryption failed: {str(e)}", "Biometric Integration Password Decryption")
+        frappe.throw(
+            "Failed to decrypt Biometric Integration password. Encryption key is invalid. "
+            "Please verify site_config.json encryption_key and restore the original key if needed."
+        )
+
+
 @frappe.whitelist()
 def check_machine_connection():
     try:
@@ -43,7 +54,7 @@ def check_machine_connection():
                 "details": "Machine credentials are incomplete.",
             }
 
-        password = settings.get_password("password")
+        password = _get_device_password(settings)
         if not password:
             return {
                 "status": "error",
@@ -110,7 +121,7 @@ def sync_attendance(start_date=None, end_date=None):
     try:
         settings = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
         url = f"http://{settings.ip}/ISAPI/AccessControl/AcsEvent?format=json"
-        decrypted_password = settings.get_password("password")
+        decrypted_password = _get_device_password(settings)
 
         if not settings.ip or not settings.username or not decrypted_password:
             frappe.throw("Please set IP, Username and Password in Biometric Integration Settings.")
