@@ -11,6 +11,8 @@
   "password",
   "column_break_zuej",
   "column_break_neqt",
+  "start_date_and_time",
+  "end_date_and_time",
   "check_connection_button"
  ],
  "fields": [
@@ -39,6 +41,16 @@
   {
    "fieldname": "column_break_neqt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "start_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "Start Date And Time"
+  },
+  {
+   "fieldname": "end_date_and_time",
+   "fieldtype": "Datetime",
+   "label": "End Date And Time"
   },
   {
    "depends_on": "eval:doc.ip && doc.username && doc.password",

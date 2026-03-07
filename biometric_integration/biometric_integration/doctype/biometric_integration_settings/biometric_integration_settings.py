@@ -12,24 +12,6 @@ import frappe
 import requests
 from requests.auth import HTTPDigestAuth
 from datetime import datetime, timedelta
-from frappe.utils import getdate
-
-
-def _build_device_datetime_range(start_date, end_date):
-    start_date = getdate(start_date)
-    end_date = getdate(end_date)
-
-    if start_date > end_date:
-        frappe.throw("From Date cannot be greater than To Date.")
-
-    start_datetime = datetime.combine(start_date, datetime.strptime("00:00:00", "%H:%M:%S").time())
-    end_datetime = datetime.combine(end_date, datetime.strptime("23:59:59", "%H:%M:%S").time())
-
-    return (
-        start_datetime.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-        end_datetime.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-    )
-
 
 
 @frappe.whitelist()
@@ -54,8 +36,7 @@ def check_machine_connection():
 
         url = f"http://{settings.ip}/ISAPI/AccessControl/AcsEvent?format=json"
         headers = {"Content-Type": "application/json"}
-        now = datetime.now().date()
-        start_time, end_time = _build_device_datetime_range(now, now)
+        now = datetime.now().strftime("%Y-%m-%d")
 
         payload = {
             "AcsEventCond": {
@@ -64,8 +45,8 @@ def check_machine_connection():
                 "maxResults": 1,
                 "major": 5,
                 "minor": 75,
-                "startTime": start_time,
-                "endTime": end_time,
+                "startTime": f"{now}T00:00:00+08:00",
+                "endTime": f"{now}T23:59:59+08:00",
             }
         }
 
@@ -106,22 +87,33 @@ def check_machine_connection():
         }
 
 
+def _get_employee_name(emp_no):
+    employee_name = frappe.db.get_value("Employee", {"attendance_device_id": emp_no}, "employee_name")
+    if employee_name:
+        return employee_name
+
+    if str(emp_no).isdigit():
+        employee_name = frappe.db.get_value("Employee", {"attendance_device_id": int(emp_no)}, "employee_name")
+        if employee_name:
+            return employee_name
+
+    employee_name = frappe.db.get_value("Employee", emp_no, "employee_name")
+    if employee_name:
+        return employee_name
+
+    return ""
+
+
 @frappe.whitelist()
-def sync_attendance(start_date=None, end_date=None):
+def sync_attendance():
     try:
         settings = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
         url = f"http://{settings.ip}/ISAPI/AccessControl/AcsEvent?format=json"
         decrypted_password = settings.get_password("password")
 
-        if not settings.ip or not settings.username or not decrypted_password:
-            frappe.throw("Please set IP, Username and Password in Biometric Integration Settings.")
+        start_time = datetime.strptime(settings.start_date_and_time, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%dT%H:%M:%S+08:00")
+        end_time = datetime.strptime(settings.end_date_and_time, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%dT%H:%M:%S+08:00")
 
-        if not start_date:
-            start_date = datetime.now().date()
-        if not end_date:
-            end_date = datetime.now().date()
-
-        start_time, end_time = _build_device_datetime_range(start_date, end_date)
         headers = {"Content-Type": "application/json"}
 
         payload = {
@@ -152,7 +144,7 @@ def sync_attendance(start_date=None, end_date=None):
         total_records = data.get("AcsEvent", {}).get("totalMatches", 0)
 
         if total_records == 0:
-            return "No attendance records found for the given date range."
+            return "No attendance records found for the given time period."
 
         if total_records > 1500:
             return "Too many records to process. Please reduce the date range and try again."
@@ -193,7 +185,7 @@ def sync_attendance(start_date=None, end_date=None):
                     continue
 
                 event_datetime = datetime.strptime(event_timestamp[:19], "%Y-%m-%dT%H:%M:%S")
-                employee_name = frappe.db.get_value("Employee", {"attendance_device_id": emp_no}, "employee_name")
+                employee_name = _get_employee_name(emp_no)
 
                 attendance_log = frappe.get_all(
                     "Biometric Attendance Log",
@@ -208,20 +200,18 @@ def sync_attendance(start_date=None, end_date=None):
                     doc.employee_no = emp_no
                     doc.event_date = event_datetime.date()
 
-                doc.employee_name = employee_name
+                if employee_name:
+                    doc.employee_name = employee_name
 
-                existing_punch = (
-                    frappe.db.sql(
-                        """
-                        SELECT COUNT(*)
-                        FROM `tabBiometric Attendance Punch Table`
-                        WHERE parent = %(parent)s
-                        AND punch_time = %(punch_time)s
-                        """,
-                        {"parent": doc.name, "punch_time": event_datetime.time()},
-                    )[0][0]
-                    > 0
-                )
+                existing_punch = frappe.db.sql(
+                    """
+                    SELECT COUNT(*)
+                    FROM `tabBiometric Attendance Punch Table`
+                    WHERE parent = %(parent)s
+                    AND punch_time = %(punch_time)s
+                    """,
+                    {"parent": doc.name, "punch_time": event_datetime.time()},
+                )[0][0] > 0
 
                 if not existing_punch:
                     doc.append(
@@ -252,11 +242,21 @@ def sync_attendance(start_date=None, end_date=None):
 
 def scheduled_attendance_sync():
     try:
+        settings = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
+
         today_date = datetime.now().date()
         yesterday_date = today_date - timedelta(days=1)
         day_before_yesterday_date = today_date - timedelta(days=2)
 
-        sync_attendance(day_before_yesterday_date, yesterday_date)
+        start_time = datetime.combine(day_before_yesterday_date, datetime.strptime("00:00:00", "%H:%M:%S").time())
+        end_time = datetime.combine(yesterday_date, datetime.strptime("23:59:59", "%H:%M:%S").time())
+
+        settings.start_date_and_time = start_time.strftime("%Y-%m-%d %H:%M:%S")
+        settings.end_date_and_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
+        settings.save()
+
+        sync_attendance()
+
         frappe.logger().info("Scheduled attendance sync started successfully")
 
         update_manual_punch_for_employee(yesterday_date)
@@ -279,6 +279,7 @@ def update_all_manual_punches():
             punch_time = manual_punch["punch_time"]
 
             attendance_device_id = frappe.db.get_value("Employee", employee, "attendance_device_id")
+            employee_name = frappe.db.get_value("Employee", employee, "employee_name")
 
             if not attendance_device_id:
                 continue
@@ -300,6 +301,9 @@ def update_all_manual_punches():
                 doc = frappe.get_doc("Biometric Attendance Log", attendance_log[0].name)
             else:
                 doc = frappe.get_doc({"doctype": "Biometric Attendance Log", "employee_no": attendance_device_id, "event_date": punch_date})
+
+            if employee_name:
+                doc.employee_name = employee_name
 
             punches = []
             for punch in doc.get("punch_table", []):
@@ -392,20 +396,24 @@ def update_manual_punch_for_employee(target_date):
             first_manual_punch_time = last_auto_punch_in + timedelta(minutes=10)
             second_manual_punch_time = first_manual_punch_time + timedelta(minutes=remaining_minutes)
 
-            manual_punch_1_doc = frappe.get_doc({
-                "doctype": "Biometric Manual Punch",
-                "employee": employee_no,
-                "punch_date": target_date,
-                "punch_time": first_manual_punch_time.strftime("%H:%M:%S"),
-            })
+            manual_punch_1_doc = frappe.get_doc(
+                {
+                    "doctype": "Biometric Manual Punch",
+                    "employee": employee_no,
+                    "punch_date": target_date,
+                    "punch_time": first_manual_punch_time.strftime("%H:%M:%S"),
+                }
+            )
             manual_punch_1_doc.insert(ignore_permissions=True)
 
-            manual_punch_2_doc = frappe.get_doc({
-                "doctype": "Biometric Manual Punch",
-                "employee": employee_no,
-                "punch_date": target_date,
-                "punch_time": second_manual_punch_time.strftime("%H:%M:%S"),
-            })
+            manual_punch_2_doc = frappe.get_doc(
+                {
+                    "doctype": "Biometric Manual Punch",
+                    "employee": employee_no,
+                    "punch_date": target_date,
+                    "punch_time": second_manual_punch_time.strftime("%H:%M:%S"),
+                }
+            )
             manual_punch_2_doc.insert(ignore_permissions=True)
 
             frappe.db.commit()
@@ -428,20 +436,24 @@ def update_manual_punch_for_employee(target_date):
             punch_out_dt = punch_in_dt + timedelta(minutes=remaining_minutes)
             punch_out_time = punch_out_dt.strftime("%H:%M:%S")
 
-            manual_punch_in_doc = frappe.get_doc({
-                "doctype": "Biometric Manual Punch",
-                "employee": employee_no,
-                "punch_date": target_date,
-                "punch_time": punch_in_time,
-            })
+            manual_punch_in_doc = frappe.get_doc(
+                {
+                    "doctype": "Biometric Manual Punch",
+                    "employee": employee_no,
+                    "punch_date": target_date,
+                    "punch_time": punch_in_time,
+                }
+            )
             manual_punch_in_doc.insert(ignore_permissions=True)
 
-            manual_punch_out_doc = frappe.get_doc({
-                "doctype": "Biometric Manual Punch",
-                "employee": employee_no,
-                "punch_date": target_date,
-                "punch_time": punch_out_time,
-            })
+            manual_punch_out_doc = frappe.get_doc(
+                {
+                    "doctype": "Biometric Manual Punch",
+                    "employee": employee_no,
+                    "punch_date": target_date,
+                    "punch_time": punch_out_time,
+                }
+            )
             manual_punch_out_doc.insert(ignore_permissions=True)
 
             frappe.db.commit()
