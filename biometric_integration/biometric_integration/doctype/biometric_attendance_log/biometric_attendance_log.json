@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "employee_no",
+  "employee_name",
   "event_date",
   "section_break_srot",
   "punch_table"
@@ -17,6 +18,14 @@
    "fieldtype": "Data",
    "label": "Employee No",
    "set_only_once": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Employee Name",
+   "read_only": 1
   },
   {
    "fieldname": "event_date",

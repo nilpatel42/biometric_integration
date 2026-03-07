@@ -11,8 +11,7 @@
   "password",
   "column_break_zuej",
   "column_break_neqt",
-  "start_date_and_time",
-  "end_date_and_time"
+  "check_connection_button"
  ],
  "fields": [
   {
@@ -38,18 +37,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "start_date_and_time",
-   "fieldtype": "Datetime",
-   "label": "Start Date And Time"
-  },
-  {
-   "fieldname": "end_date_and_time",
-   "fieldtype": "Datetime",
-   "label": "End Date And Time"
-  },
-  {
    "fieldname": "column_break_neqt",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.ip && doc.username && doc.password",
+   "fieldname": "check_connection_button",
+   "fieldtype": "Button",
+   "label": "Check Machine Connection"
   }
  ],
  "grid_page_length": 50,

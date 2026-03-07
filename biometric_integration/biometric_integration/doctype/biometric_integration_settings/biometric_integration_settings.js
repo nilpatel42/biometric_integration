@@ -1,46 +1,58 @@
 // Copyright (c) 2025, NDV and contributors
 // For license information, please see license.txt
 
-// frappe.ui.form.on("Biometric Integration Settings", {
-// 	refresh(frm) {
-
-// 	},
-// });
-
-
-frappe.ui.form.on("Biometric Integration Settings", {
-    refresh: function(frm) {
+frappe.ui.form.on('Biometric Integration Settings', {
+    refresh(frm) {
         frm.add_custom_button(__('Sync Attendance'), function() {
-            frappe.call({
-                method: "biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.sync_attendance",
-                freeze: true,
-                freeze_message: "Syncing Attendance...",
-                callback: function(r) {
-                    frappe.hide_progress();
-
-                    if (r.message) {
-                        // Show green alert on success
-                        frappe.show_alert({
-                            message: __(r.message),
-                            indicator: 'green'
-                        });
+            const d = new frappe.ui.Dialog({
+                title: __('Sync Attendance by Date Range'),
+                fields: [
+                    {
+                        fieldname: 'from_date',
+                        label: __('From Date'),
+                        fieldtype: 'Date',
+                        reqd: 1,
+                        default: frappe.datetime.get_today()
+                    },
+                    {
+                        fieldname: 'to_date',
+                        label: __('To Date'),
+                        fieldtype: 'Date',
+                        reqd: 1,
+                        default: frappe.datetime.get_today()
                     }
+                ],
+                primary_action_label: __('Sync'),
+                primary_action(values) {
+                    frappe.call({
+                        method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.sync_attendance',
+                        args: {
+                            start_date: values.from_date,
+                            end_date: values.to_date
+                        },
+                        freeze: true,
+                        freeze_message: __('Syncing Attendance from 00:00:00 to 23:59:59...'),
+                        callback: function(r) {
+                            frappe.hide_progress();
+                            if (r.message) {
+                                frappe.show_alert({
+                                    message: __(r.message),
+                                    indicator: 'green'
+                                });
+                            }
+                        }
+                    });
+                    d.hide();
                 }
             });
+
+            d.show();
         });
-    }
-});
 
-
-
-frappe.ui.form.on('Biometric Integration Settings', {
-    refresh: function(frm) {
         frm.add_custom_button(__('Sync Manual Punches'), function() {
-            // Confirm action
             frappe.confirm(
                 __('Are you sure you want to update all manual punches?'),
                 function() {
-                    // Call the server-side method
                     frappe.call({
                         method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_all_manual_punches',
                         callback: function(response) {
@@ -59,34 +71,30 @@ frappe.ui.form.on('Biometric Integration Settings', {
                 }
             );
         });
-    }
-});
 
 
-frappe.ui.form.on('Biometric Integration Settings', {
-    refresh: function(frm) {
         frm.add_custom_button(__('Update Manual Punch for Maganbhai'), function() {
-            // Create a dialog to ask for a date
-            let d = new frappe.ui.Dialog({
-                title: 'Select Date',
+            const d = new frappe.ui.Dialog({
+                title: __('Select Date'),
                 fields: [
                     {
-                        label: 'Date',
                         fieldname: 'target_date',
+                        label: __('Date'),
                         fieldtype: 'Date',
-                        reqd: 1
+                        reqd: 1,
+                        default: frappe.datetime.get_today()
                     }
                 ],
-                primary_action_label: 'Update',
+                primary_action_label: __('Update'),
                 primary_action(values) {
-                    // Call the server-side method with selected date
                     frappe.call({
                         method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.update_manual_punch_for_employee',
                         args: {
                             target_date: values.target_date
                         },
                         callback: function(response) {
-                            frappe.msgprint(response.message);
+                            const result = response.message || {};
+                            frappe.msgprint(result.message || __('Update completed.'));
                         }
                     });
                     d.hide();
@@ -94,6 +102,34 @@ frappe.ui.form.on('Biometric Integration Settings', {
             });
             d.show();
         });
+
+        bind_check_connection_button(frm);
     }
 });
 
+function bind_check_connection_button(frm) {
+    const button_field = frm.fields_dict.check_connection_button;
+    if (!button_field || !button_field.$input || frm._connection_check_bound) {
+        return;
+    }
+
+    frm._connection_check_bound = true;
+    button_field.$input.on('click', function() {
+        frappe.call({
+            method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.check_machine_connection',
+            freeze: true,
+            freeze_message: __('Checking machine connection...'),
+            callback: function(r) {
+                const result = r.message || {};
+                const indicator = result.status === 'success' ? 'green' : 'red';
+
+                frappe.msgprint({
+                    title: result.status === 'success' ? __('Connection Successful') : __('Connection Failed'),
+                    indicator: indicator,
+                    message: `<div><b>${__('Result')}:</b> ${frappe.utils.escape_html(result.message || __('Unknown response'))}</div>
+                              <br><div><b>${__('Details')}:</b><br>${frappe.utils.escape_html(result.details || __('No details available'))}</div>`
+                });
+            }
+        });
+    });
+}
