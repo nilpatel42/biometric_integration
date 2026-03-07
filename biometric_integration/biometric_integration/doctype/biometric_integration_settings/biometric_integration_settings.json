@@ -10,9 +10,7 @@
   "username",
   "password",
   "column_break_zuej",
-  "column_break_neqt",
-  "start_date_and_time",
-  "end_date_and_time"
+  "column_break_neqt"
  ],
  "fields": [
   {
@@ -38,16 +36,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "start_date_and_time",
-   "fieldtype": "Datetime",
-   "label": "Start Date And Time"
-  },
-  {
-   "fieldname": "end_date_and_time",
-   "fieldtype": "Datetime",
-   "label": "End Date And Time"
-  },
-  {
    "fieldname": "column_break_neqt",
    "fieldtype": "Column Break"
   }
@@ -57,7 +45,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-04 10:05:15.598078",
+ "modified": "2026-03-07 16:56:27.969027",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",
