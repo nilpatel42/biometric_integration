@@ -87,21 +87,72 @@ def check_machine_connection():
         }
 
 
-def _get_employee_name(emp_no):
-    employee_name = frappe.db.get_value("Employee", {"attendance_device_id": emp_no}, "employee_name")
-    if employee_name:
-        return employee_name
+def _get_employee_name_from_device(settings, password, emp_no):
+    url = f"http://{settings.ip}/ISAPI/AccessControl/UserInfo/Search?format=json"
+    headers = {"Content-Type": "application/json"}
 
-    if str(emp_no).isdigit():
-        employee_name = frappe.db.get_value("Employee", {"attendance_device_id": int(emp_no)}, "employee_name")
-        if employee_name:
-            return employee_name
+    payloads = [
+        {
+            "UserInfoSearchCond": {
+                "searchID": "1",
+                "searchResultPosition": 0,
+                "maxResults": 1,
+                "EmployeeNoList": [{"employeeNo": str(emp_no)}],
+            }
+        },
+        {
+            "UserInfoSearchCond": {
+                "searchID": "1",
+                "searchResultPosition": 0,
+                "maxResults": 1,
+                "employeeNoList": [{"employeeNo": str(emp_no)}],
+            }
+        },
+    ]
 
-    employee_name = frappe.db.get_value("Employee", emp_no, "employee_name")
-    if employee_name:
-        return employee_name
+    for payload in payloads:
+        try:
+            response = requests.post(
+                url,
+                auth=HTTPDigestAuth(settings.username, password),
+                headers=headers,
+                json=payload,
+                verify=False,
+                timeout=30,
+            )
+            if response.status_code != 200:
+                continue
+
+            data = response.json()
+            user_info = data.get("UserInfoSearch", {}).get("UserInfo", [])
+            if user_info and user_info[0].get("name"):
+                return user_info[0].get("name")
+        except Exception:
+            continue
 
     return ""
+
+
+def _get_employee_name(settings, password, emp_no, name_cache=None):
+    cache = name_cache if isinstance(name_cache, dict) else {}
+    cache_key = str(emp_no)
+
+    if cache_key in cache:
+        return cache[cache_key]
+
+    employee_name = frappe.db.get_value("Employee", {"attendance_device_id": emp_no}, "employee_name")
+    if not employee_name and str(emp_no).isdigit():
+        employee_name = frappe.db.get_value("Employee", {"attendance_device_id": int(emp_no)}, "employee_name")
+
+    if not employee_name:
+        employee_name = frappe.db.get_value("Employee", str(emp_no), "employee_name")
+
+    if not employee_name:
+        employee_name = _get_employee_name_from_device(settings, password, emp_no)
+
+    employee_name = employee_name or ""
+    cache[cache_key] = employee_name
+    return employee_name
 
 
 @frappe.whitelist()
@@ -151,6 +202,7 @@ def sync_attendance():
 
         count = 0
         skipped = 0
+        employee_name_cache = {}
         position = 0
         batch_size = 30
         frappe.publish_progress(0, title="Attendance Sync", description="Starting attendance sync...")
@@ -185,7 +237,7 @@ def sync_attendance():
                     continue
 
                 event_datetime = datetime.strptime(event_timestamp[:19], "%Y-%m-%dT%H:%M:%S")
-                employee_name = _get_employee_name(emp_no)
+                employee_name = _get_employee_name(settings, decrypted_password, emp_no, employee_name_cache)
 
                 attendance_log = frappe.get_all(
                     "Biometric Attendance Log",
