@@ -13,47 +13,21 @@ dependencies = []
 requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
 
-# Frappe Cloud version compatibility
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0 <17.0.0"
 
-# These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]
-# package_name = "~=1.1.0"
 
 [tool.ruff]
 line-length = 110
 target-version = "py310"
 
 [tool.ruff.lint]
-select = [
-    "F",
-    "E",
-    "W",
-    "I",
-    "UP",
-    "B",
-    "RUF",
-]
+select = ["F","E","W","I","UP","B","RUF"]
 ignore = [
-    "B017",
-    "B018",
-    "B023",
-    "B904",
-    "E101",
-    "E402",
-    "E501",
-    "E741",
-    "F401",
-    "F403",
-    "F405",
-    "F722",
-    "W191",
-    "UP030",
-    "UP031",
-    "UP032",
-    "UP037",
-    "UP040",
+    "B017","B018","B023","B904","E101","E402","E501","E741",
+    "F401","F403","F405","F722","W191","UP030","UP031","UP032",
+    "UP037","UP040",
 ]
 typing-modules = ["frappe.types.DF"]
 
