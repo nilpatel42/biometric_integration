@@ -1,0 +1,133 @@
+{
+ "app": "biometric_integration",
+ "creation": "2026-03-08 14:31:14.212044",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Biometric Integration",
+   "link_to": "Biometric Integration",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link",
+   "url": "/desk/biometric-integration"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Reports",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "book-down",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Daily Report",
+   "link_to": "Biometric Daily Report",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "book-down",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Monthly Report",
+   "link_to": "Biometric Monthly Report",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Doctype & Log",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "users",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Attendance Log",
+   "link_to": "Biometric Attendance Log",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "file-pen",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Manual Punch",
+   "link_to": "Biometric Manual Punch",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "calendar-x-2",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Leave Log",
+   "link_to": "Attendance Leave Log",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "setting-gear",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Biometric Integration Settings",
+   "link_to": "Biometric Integration Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-03-08 14:49:33.568398",
+ "modified_by": "Administrator",
+ "module": "Biometric Integration",
+ "name": "Biometric Integration",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Biometric Integration"
+}
