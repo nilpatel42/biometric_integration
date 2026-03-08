@@ -1,16 +1,19 @@
 # Copyright (c) 2025, NDV and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
+from datetime import datetime, timedelta
 from frappe.model.document import Document
 
-
 class BiometricManualPunch(Document):
-	pass
+    def before_save(self):
+        pass  # add pre-save validation logic here if needed
 
+    def after_insert(self):
+        add_manual_punch(self.employee, self.punch_date, self.punch_time)
 
-from datetime import datetime, timedelta
-import frappe
+    def on_update(self):
+        add_manual_punch(self.employee, self.punch_date, self.punch_time)
 
 @frappe.whitelist()
 def add_manual_punch(employee, punch_date, punch_time):
@@ -111,7 +114,6 @@ def edit_button_delete_punch(doc_name, new_punch_date, new_punch_time):
     except Exception as e:
         frappe.log_error(f"Error editing manual punch: {str(e)}")
         return False
-
 
 @frappe.whitelist()
 def delete_manual_punch(doc, method=None):
