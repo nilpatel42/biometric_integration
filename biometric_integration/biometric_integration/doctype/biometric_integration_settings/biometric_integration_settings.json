@@ -20,19 +20,16 @@
  ],
  "fields": [
   {
-   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "ip",
    "fieldtype": "Data",
    "label": "IP"
   },
   {
-   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "username",
    "fieldtype": "Data",
    "label": "Username"
   },
   {
-   "depends_on": "eval:frappe.session.user == 'Administrator'",
    "fieldname": "password",
    "fieldtype": "Password",
    "label": "Password"
@@ -84,7 +81,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 10:49:42.739233",
+ "modified": "2026-03-10 13:09:31.222652",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",

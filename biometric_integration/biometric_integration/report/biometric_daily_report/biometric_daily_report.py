@@ -80,9 +80,9 @@ def execute(filters=None):
         
         # Define expected end times with 30-minute tolerance (in seconds)
         end_times = {
-            "Full Time": 20 * 3600,    # 8:00 PM = 20:00
+            "Full-time": 20 * 3600,    # 8:00 PM = 20:00
             "Mid Shift": 19 * 3600,    # 7:00 PM = 19:00
-            "Early Shift": 18 * 3600   # 6:00 PM = 18:00
+            "Part-time": 18 * 3600   # 6:00 PM = 18:00
         }
         
         # 30 minutes tolerance = 30 * 60 = 1800 seconds
