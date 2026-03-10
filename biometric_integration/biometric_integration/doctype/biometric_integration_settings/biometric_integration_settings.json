@@ -48,6 +48,7 @@
    "label": "General Settings"
   },
   {
+   "depends_on": "eval: doc.ip",
    "fieldname": "biometric_attendance_log_settigns_section",
    "fieldtype": "Section Break",
    "label": "Biometric Attendance Log Settigns"
@@ -81,7 +82,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 13:09:31.222652",
+ "modified": "2026-03-10 13:11:02.299292",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",
