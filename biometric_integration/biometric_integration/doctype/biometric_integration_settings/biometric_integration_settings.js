@@ -9,8 +9,14 @@ frappe.ui.form.on('Biometric Integration Settings', {
             }
         }
     },
-    
+
     refresh(frm) {
+
+        // Only show buttons if device credentials are filled
+        if (!(frm.doc.ip && frm.doc.username && frm.doc.password)) {
+            return;
+        }
+
         frm.add_custom_button(__('Attendance'), function() {
             const d = new frappe.ui.Dialog({
                 title: __('Select Date & Time Range'),
@@ -50,22 +56,9 @@ frappe.ui.form.on('Biometric Integration Settings', {
                     d.hide();
                     frappe.call({
                         method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.sync_attendance',
-                        args: {
-                            from_date: values.from_date,
-                            from_time: values.from_time,
-                            to_date: values.to_date,
-                            to_time: values.to_time
-                        },
+                        args: values,
                         freeze: true,
-                        freeze_message: __('Syncing Attendance...'),
-                        callback: function(r) {
-                            if (r.message) {
-                                frappe.show_alert({
-                                    message: __(r.message),
-                                    indicator: 'green'
-                                });
-                            }
-                        }
+                        freeze_message: __('Syncing Attendance...')
                     });
                 }
             });
