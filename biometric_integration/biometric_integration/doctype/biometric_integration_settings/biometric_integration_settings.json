@@ -6,11 +6,17 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "general_settings_section",
   "ip",
   "username",
   "password",
   "column_break_zuej",
-  "column_break_neqt"
+  "column_break_neqt",
+  "biometric_attendance_log_settigns_section",
+  "enable_biometric_attendance_log_deletion",
+  "delete_logs_after_days",
+  "column_break_ktit",
+  "column_break_sezi"
  ],
  "fields": [
   {
@@ -38,6 +44,39 @@
   {
    "fieldname": "column_break_neqt",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "general_settings_section",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "fieldname": "biometric_attendance_log_settigns_section",
+   "fieldtype": "Section Break",
+   "label": "Biometric Attendance Log Settigns"
+  },
+  {
+   "depends_on": "eval: doc.enable_biometric_attendance_log_deletion",
+   "fieldname": "delete_logs_after_days",
+   "fieldtype": "Int",
+   "label": "Delete Logs After (Days)",
+   "mandatory_depends_on": "eval: doc.enable_biometric_attendance_log_deletion",
+   "non_negative": 1,
+   "precision": "0"
+  },
+  {
+   "fieldname": "column_break_ktit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_sezi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_biometric_attendance_log_deletion",
+   "fieldtype": "Check",
+   "label": "Enable Biometric Attendance Log Deletion"
   }
  ],
  "grid_page_length": 50,
@@ -45,7 +84,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-07 16:56:27.969027",
+ "modified": "2026-03-10 10:49:42.739233",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",

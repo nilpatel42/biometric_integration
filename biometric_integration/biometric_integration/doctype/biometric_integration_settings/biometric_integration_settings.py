@@ -1,18 +1,14 @@
 # Copyright (c) 2025, NDV and contributors
 # For license information, please see license.txt
 
-from frappe.model.document import Document
-
-
-class BiometricIntegrationSettings(Document):
-    pass
-
-
 import frappe
 import requests
 from requests.auth import HTTPDigestAuth
 from datetime import datetime, timedelta
+from frappe.model.document import Document
 
+class BiometricIntegrationSettings(Document):
+    pass
 
 @frappe.whitelist()
 def check_machine_connection():
