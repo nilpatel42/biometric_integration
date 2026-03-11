@@ -259,6 +259,5 @@ add_to_apps_screen = [{
     "name": "biometric_integration",
     "logo": "/assets/biometric_integration/Biometric.webp",
     "title": "Biometric",
-    "route": "/app/home",
     "has_permission": "erpnext.check_app_permission",
 }]
