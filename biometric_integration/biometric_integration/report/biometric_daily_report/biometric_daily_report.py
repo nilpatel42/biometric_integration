@@ -48,10 +48,10 @@ def execute(filters=None):
     # Create a set of present employee IDs for faster lookup
     present_employee_ids = {emp.attendance_device_id for emp in present_employees}
 
-    # Fetch all Attendance Leave Log entries for selected date
+    # Fetch all Biometric Leave Log entries for selected date
     leave_logs = frappe.db.sql("""
         SELECT employee_no, leave_from, leave_to, full_day
-        FROM `tabAttendance Leave Log`
+        FROM `tabBiometric Leave Log`
         WHERE date = %(selected_date)s
     """, {"selected_date": selected_date}, as_dict=True)
 
