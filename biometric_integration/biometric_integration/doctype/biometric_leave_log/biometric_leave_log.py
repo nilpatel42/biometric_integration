@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class AttendanceLeaveLog(Document):
+class BiometricLeaveLog(Document):
 	pass

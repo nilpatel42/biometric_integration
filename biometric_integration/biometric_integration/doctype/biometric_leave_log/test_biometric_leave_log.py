@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestAttendanceLeaveLog(FrappeTestCase):
+class TestBiometricLeaveLog(FrappeTestCase):
 	pass
