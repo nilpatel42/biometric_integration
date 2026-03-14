@@ -64,7 +64,7 @@ def execute(filters=None):
             e.employee_name,
             e.attendance_device_id,
             e.employment_type
-        FROM `tabAttendance Leave Log` l
+        FROM `Biometric Leave Log` l
         JOIN `tabEmployee` e ON e.attendance_device_id = l.employee_no
         WHERE l.date = %(selected_date)s
         ORDER BY CAST(l.employee_no AS UNSIGNED)
