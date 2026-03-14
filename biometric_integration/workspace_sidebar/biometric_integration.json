@@ -47,6 +47,18 @@
    "icon": "book-down",
    "indent": 0,
    "keep_closed": 0,
+   "label": "Leave Report",
+   "link_to": "Biometric Leave Report",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "book-down",
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Monthly Report",
    "link_to": "Biometric Monthly Report",
    "link_type": "Report",
@@ -123,7 +135,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-08 14:49:33.568398",
+ "modified": "2026-03-14 12:03:40.769967",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration",

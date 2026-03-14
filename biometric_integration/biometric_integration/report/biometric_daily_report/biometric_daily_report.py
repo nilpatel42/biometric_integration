@@ -47,6 +47,39 @@ def execute(filters=None):
     
     # Create a set of present employee IDs for faster lookup
     present_employee_ids = {emp.attendance_device_id for emp in present_employees}
+
+    # Fetch all Attendance Leave Log entries for selected date
+    leave_logs = frappe.db.sql("""
+        SELECT employee_no, leave_from, leave_to, full_day
+        FROM `tabAttendance Leave Log`
+        WHERE date = %(selected_date)s
+    """, {"selected_date": selected_date}, as_dict=True)
+
+    # Build a dict: employee_no -> { "leave_from": seconds or None, "leave_to": seconds or None, "full_day": 0/1 }
+    # One employee may have multiple records (e.g. late arrival + early leave)
+    def parse_time_to_seconds(val):
+        if val is None:
+            return None
+        if hasattr(val, 'total_seconds'):
+            return val.total_seconds()
+        # string like "19:40:00" or "7:40:00"
+        try:
+            parts = str(val).split(":")
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        except Exception:
+            return None
+
+    leave_log_map = {}
+    for log in leave_logs:
+        emp_id = str(log.employee_no)
+        if emp_id not in leave_log_map:
+            leave_log_map[emp_id] = {"leave_from": None, "leave_to": None, "full_day": 0}
+        if log.full_day:
+            leave_log_map[emp_id]["full_day"] = 1
+        if log.leave_from:
+            leave_log_map[emp_id]["leave_from"] = parse_time_to_seconds(log.leave_from)
+        if log.leave_to:
+            leave_log_map[emp_id]["leave_to"] = parse_time_to_seconds(log.leave_to)
     
     def natural_sort_key(emp):
         try:
@@ -65,38 +98,114 @@ def execute(filters=None):
         """Check if timedelta falls between start_hour and end_hour"""
         if not timedelta_obj:
             return False
-        # Convert timedelta to hours
         total_seconds = timedelta_obj.total_seconds()
         hours = total_seconds / 3600
         return start_hour <= hours < end_hour
-    
-    def check_early_leave(last_punch_time, employment_type):
-        """Check if employee left early based on employment type"""
-        if not last_punch_time or not employment_type:
-            return ""
-            
-        # Convert timedelta to total seconds for comparison
-        punch_seconds = last_punch_time.total_seconds()
-        
-        # Define expected end times with 30-minute tolerance (in seconds)
-        end_times = {
-            "Full-time": 20 * 3600,    # 8:00 PM = 20:00
-            "Mid Shift": 19 * 3600,    # 7:00 PM = 19:00
-            "Part-time": 18 * 3600   # 6:00 PM = 18:00
+
+    def check_early_leave_present(first_punch_time, last_punch_time, employee_id, employment_type):
+        """
+        For present employees only.
+        Checks leave_to against first punch, leave_from against last punch.
+        Returns:
+          "1"         - punch matches logged leave time within +-15 min (or came before leave_to)
+          "2"         - no leave log but left before shift end (unlogged early leave)
+          "0 (HH:MM)" - left before logged leave_from time, or came after leave_to
+          ""          - full day worked, or no employment_type
+        """
+        def fmt(total_seconds):
+            h, m = divmod(int(total_seconds / 60), 60)
+            return f"{h:02}:{m:02}"
+
+        emp_id = str(employee_id)
+        leave_entry = leave_log_map.get(emp_id)
+
+        shift_end_times = {
+            "Full-time": 19 * 3600 + 40 * 60,  # 7:40 PM = 19:40
+            "Mid Shift": 19 * 3600,              # 7:00 PM = 19:00
+            "Part-time": 18 * 3600               # 6:00 PM = 18:00
         }
-        
-        # 30 minutes tolerance = 30 * 60 = 1800 seconds
-        tolerance = 30 * 60
-        
-        expected_end = end_times.get(employment_type)
+        tolerance_seconds = 15 * 60
+        shift_end_tolerance = 30 * 60
+
+        expected_end = shift_end_times.get(employment_type)
+
+        # If employment_type is not set or not recognised, give no flag
         if expected_end is None:
             return ""
-            
-        # If punch time is before (expected_end - tolerance), it's early leave
-        if punch_seconds < (expected_end - tolerance):
-            return "0"
-        else:
+
+        if leave_entry is None:
+            # No leave log — check if last punch is before shift end
+            if last_punch_time is None:
+                return ""
+            last_punch_seconds = last_punch_time.total_seconds()
+            if last_punch_seconds < (expected_end - shift_end_tolerance):
+                return "2"
             return ""
+
+        leave_from_seconds = leave_entry.get("leave_from")
+        leave_to_seconds = leave_entry.get("leave_to")
+
+        result_leave_to = None
+        result_leave_from = None
+
+        # Check leave_to against first punch
+        if leave_to_seconds is not None:
+            if first_punch_time is not None:
+                first_punch_seconds = first_punch_time.total_seconds()
+                diff = first_punch_seconds - leave_to_seconds
+                # Came before or within +-15 min of leave_to -> good -> "1"
+                if diff <= tolerance_seconds:
+                    result_leave_to = "1"
+                else:
+                    # Came after leave_to by more than 15 min
+                    result_leave_to = f"0 ({fmt(leave_to_seconds)})"
+
+        # Check leave_from against last punch
+        if leave_from_seconds is not None:
+            # Skip if leave_from is at/near shift end (full day)
+            if leave_from_seconds < (expected_end - shift_end_tolerance):
+                if last_punch_time is not None:
+                    last_punch_seconds = last_punch_time.total_seconds()
+                    diff = last_punch_seconds - leave_from_seconds
+                    if diff > tolerance_seconds:
+                        # Still present after leave_from -> leave taken, present beyond -> "1"
+                        result_leave_from = "1"
+                    elif abs(diff) <= tolerance_seconds:
+                        result_leave_from = "1"
+                    else:
+                        result_leave_from = f"0 ({fmt(leave_from_seconds)})"
+
+        # Build final result: leave_to result first, leave_from result second
+        parts = [r for r in [result_leave_to, result_leave_from] if r is not None]
+
+        # Leave log exists but no result produced (e.g. leave_from near shift end) -> "1"
+        if not parts:
+            return "1"
+
+        # If both are "1" show just "1"
+        if all(p == "1" for p in parts):
+            return "1"
+
+        return " | ".join(parts)
+
+    def check_early_leave_absent(employee_id, employment_type):
+        """
+        For absent employees only.
+        Returns:
+          "1" - leave log exists (expected absence confirmed)
+          "2" - no leave log found (absent without leave log)
+          ""  - no employment_type set, no flag
+        """
+        if not employment_type or employment_type not in ("Full-time", "Mid Shift", "Part-time"):
+            return ""
+
+        emp_id = str(employee_id)
+        leave_entry = leave_log_map.get(emp_id)
+
+        if leave_entry is not None:
+            return "1"
+        else:
+            return "2"
     
     # First pass: determine max_punches
     for employee in present_employees:
@@ -115,7 +224,6 @@ def execute(filters=None):
                 ORDER BY at.punch_time
             """, {"log_name": log.name}, as_dict=True)
             
-            # Skip this log if there are no punches
             if not punches:
                 continue
             
@@ -123,14 +231,9 @@ def execute(filters=None):
             if len(punches) == 2:
                 first_punch = punches[0]["punch_time"]
                 second_punch = punches[1]["punch_time"]
-                
-                # First punch should be between 7 AM and 10 AM
                 first_punch_valid = is_time_between(first_punch, 7, 10)
-                # Second punch should be between 7 PM and 10 PM
                 second_punch_valid = is_time_between(second_punch, 19, 22)
-                
                 if first_punch_valid and second_punch_valid:
-                    # Add "<-- Check" as third punch
                     punches.append({"punch_time": None, "punch_type": "<-- Check"})
             
             max_punches = max(max_punches, len(punches))
@@ -151,10 +254,10 @@ def execute(filters=None):
         "fieldname": "early_leave",
         "label": _("Early Leave"),
         "fieldtype": "Data",
-        "width": 100,
+        "width": 150,
         "align": "center"
     })
-    
+
     # Second pass: Process data with correct column structure
     for employee in present_employees:
         attendance_logs = frappe.db.sql("""
@@ -172,7 +275,6 @@ def execute(filters=None):
                 ORDER BY at.punch_time
             """, {"log_name": log.name}, as_dict=True)
             
-            # Skip this log if there are no punches
             if not punches:
                 continue
                 
@@ -197,14 +299,9 @@ def execute(filters=None):
             if len(punches) == 2:
                 first_punch = punches[0]["punch_time"]
                 second_punch = punches[1]["punch_time"]
-                
-                # First punch should be between 7 AM and 10 AM
                 first_punch_valid = is_time_between(first_punch, 7, 10)
-                # Second punch should be between 7 PM and 10 PM
                 second_punch_valid = is_time_between(second_punch, 19, 22)
-                
                 if first_punch_valid and second_punch_valid:
-                    # Add "<-- Check" as third punch
                     punches.append({"punch_time": None, "punch_type": "<-- Check"})
             
             # Process all punches first
@@ -227,15 +324,15 @@ def execute(filters=None):
             
             # Process early leave AFTER all punches are processed
             if punches:
-                # Get the actual last punch (not the "<-- Check" one)
                 actual_punches = [p for p in punches if p.get("punch_type") != "<-- Check"]
                 if actual_punches:
+                    first_punch = actual_punches[0]["punch_time"]
                     last_punch = actual_punches[-1]["punch_time"]
-                    early_leave_status = check_early_leave(last_punch, employee.employment_type)
+                    early_leave_status = check_early_leave_present(first_punch, last_punch, employee.attendance_device_id, employee.employment_type)
                     row_data["early_leave"] = early_leave_status
                     
-                    # Highlight early leave in red
-                    if early_leave_status == "0":
+                    # Highlight red for everything except pure "1"
+                    if early_leave_status != "" and early_leave_status != "1":
                         row_indicators["early_leave"] = "red"
                 else:
                     row_data["early_leave"] = ""
@@ -271,7 +368,6 @@ def execute(filters=None):
         "early_leave": ""
     }
     
-    # Fill punch columns in total row
     for i in range(1, max_punches + 1):
         total_row[f"punch_{i}"] = None
     
@@ -293,12 +389,23 @@ def execute(filters=None):
         absent_row = {field["fieldname"]: None for field in columns}
         absent_row["employee_name"] = employee.employee_name
         absent_row["employee_id"] = employee.attendance_device_id
-        absent_row["early_leave"] = ""
-        # Fill punch columns for absent employees
+
+        early_leave_status = check_early_leave_absent(employee.attendance_device_id, employee.employment_type)
+        absent_row["early_leave"] = early_leave_status
+
         for i in range(1, max_punches + 1):
             absent_row[f"punch_{i}"] = None
         formatted_data.append(absent_row)
-    
+
+    # Add one blank row then legend rows (one per line)
+    blank_row = {field["fieldname"]: None for field in columns}
+    formatted_data.append(blank_row)
+
+    for legend_text in ["0 - Left Before / After Logged Leave Time", "1 - Leave Taken", "2 - No Leave Taken"]:
+        legend_row = {field["fieldname"]: None for field in columns}
+        legend_row["employee_name"] = legend_text
+        formatted_data.append(legend_row)
+
     return columns, formatted_data
 
 def calculate_total_minutes(punches):
@@ -308,7 +415,6 @@ def calculate_total_minutes(punches):
         try:
             punch_in = punches[i]["punch_time"]
             punch_out = punches[i + 1]["punch_time"]
-            
             minutes_diff = int(punch_out.total_seconds() / 60) - int(punch_in.total_seconds() / 60)
             total_minutes += minutes_diff
         except Exception:

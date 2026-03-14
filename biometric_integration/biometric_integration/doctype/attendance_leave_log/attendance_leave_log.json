@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_copy": 1,
+ "autoname": "hash",
  "creation": "2025-03-02 11:22:38.650535",
  "default_view": "List",
  "doctype": "DocType",
@@ -9,8 +10,10 @@
   "employee_no",
   "date",
   "column_break_ajxl",
-  "leave_from",
-  "leave_to"
+  "column_break_cagn",
+  "full_day",
+  "leave_to",
+  "leave_from"
  ],
  "fields": [
   {
@@ -25,32 +28,44 @@
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "Date",
-   "set_only_once": 1
+   "label": "Date"
   },
   {
    "fieldname": "column_break_ajxl",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "leave_from",
-   "fieldtype": "Time",
-   "label": "Leave From"
+   "fieldname": "column_break_cagn",
+   "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "fieldname": "full_day",
+   "fieldtype": "Check",
+   "label": "Full Day"
+  },
+  {
+   "depends_on": "eval: !doc.full_day",
    "fieldname": "leave_to",
    "fieldtype": "Time",
    "label": "Leave To"
+  },
+  {
+   "depends_on": "eval: !doc.full_day",
+   "fieldname": "leave_from",
+   "fieldtype": "Time",
+   "label": "Leave From"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-04 10:05:15.136051",
+ "modified": "2026-03-13 18:48:04.115571",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Attendance Leave Log",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -72,7 +87,7 @@
   }
  ],
  "row_format": "Dynamic",
- "sort_field": "modified",
+ "sort_field": "date",
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_no",
