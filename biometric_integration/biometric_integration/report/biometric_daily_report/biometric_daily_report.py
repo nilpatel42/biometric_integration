@@ -254,7 +254,7 @@ def execute(filters=None):
         "fieldname": "early_leave",
         "label": _("Early Leave"),
         "fieldtype": "Data",
-        "width": 150,
+        "width": 100,
         "align": "center"
     })
 
