@@ -58,7 +58,15 @@ frappe.ui.form.on('Biometric Integration Settings', {
                         method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.sync_attendance',
                         args: values,
                         freeze: true,
-                        freeze_message: __('Syncing Attendance...')
+                        freeze_message: __('Syncing Attendance...'),
+                        callback: function(r) {
+                            if (r.message) {
+                                frappe.show_alert({
+                                    message: r.message,
+                                    indicator: 'green'
+                                }, 10);
+                            }
+                        }
                     });
                 }
             });

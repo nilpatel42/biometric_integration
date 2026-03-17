@@ -189,23 +189,38 @@ def execute(filters=None):
         return " | ".join(parts)
 
     def check_early_leave_absent(employee_id, employment_type):
-        """
-        For absent employees only.
-        Returns:
-          "1" - leave log exists (expected absence confirmed)
-          "2" - no leave log found (absent without leave log)
-          ""  - no employment_type set, no flag
-        """
         if not employment_type or employment_type not in ("Full-time", "Mid Shift", "Part-time"):
             return ""
 
         emp_id = str(employee_id)
         leave_entry = leave_log_map.get(emp_id)
 
-        if leave_entry is not None:
-            return "1"
-        else:
-            return "2"
+        if leave_entry is None:
+            return "2"  # absent, no leave log
+
+        # Has leave log — check if full day
+        if leave_entry.get("full_day") == 1:
+            return "1"  # full day leave — expected absent
+
+        # Half day leave (leave_from only OR leave_to only)
+        # Employee should have been present for half day but wasn't
+        leave_from_seconds = leave_entry.get("leave_from")
+        leave_to_seconds = leave_entry.get("leave_to")
+
+        def fmt(total_seconds):
+            h, m = divmod(int(total_seconds / 60), 60)
+            return f"{h:02}:{m:02}"
+
+        if leave_from_seconds is not None and leave_to_seconds is None:
+            # Should have worked morning, left at leave_from — but fully absent
+            return f"0 ({fmt(leave_from_seconds)})"
+
+        if leave_to_seconds is not None and leave_from_seconds is None:
+            # Should have returned at leave_to — but fully absent
+            return f"0 ({fmt(leave_to_seconds)})"
+
+        # Both from and to exist — partial leave, employee fully absent
+        return "1"
     
     # First pass: determine max_punches
     for employee in present_employees:
