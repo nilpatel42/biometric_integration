@@ -12,6 +12,11 @@
   "password",
   "column_break_zuej",
   "column_break_neqt",
+  "device_name",
+  "device_id",
+  "model",
+  "device_serial_number",
+  "mac_address",
   "biometric_attendance_log_settigns_section",
   "enable_biometric_attendance_log_deletion",
   "delete_logs_after_days",
@@ -75,6 +80,36 @@
    "fieldname": "enable_biometric_attendance_log_deletion",
    "fieldtype": "Check",
    "label": "Enable Biometric Attendance Log Deletion"
+  },
+  {
+   "fieldname": "device_name",
+   "fieldtype": "Data",
+   "label": "Device Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "device_serial_number",
+   "fieldtype": "Data",
+   "label": "Device Serial Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mac_address",
+   "fieldtype": "Data",
+   "label": "MAC Address",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -82,7 +117,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 13:11:02.299292",
+ "modified": "2026-03-20 09:31:46.494142",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration Settings",

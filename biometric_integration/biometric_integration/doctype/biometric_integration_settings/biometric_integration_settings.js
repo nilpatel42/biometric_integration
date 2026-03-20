@@ -96,6 +96,81 @@ frappe.ui.form.on('Biometric Integration Settings', {
             );
         }, __('Sync'));
 
+        frm.add_custom_button('Fetch Device Info', () => {
+            frappe.call({
+                method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.fetch_device_info',
+                callback: function(r) {
+                    console.log(r);  // 🔥 DEBUG
+
+                    if (!r.exc && r.message) {
+                        frappe.show_alert({
+                            message: r.message.message || 'Done',
+                            indicator: 'green'
+                        }, 5);
+
+                        frm.reload_doc();
+                    }
+                },
+                error: function(err) {
+                    console.log(err);
+                    frappe.show_alert({
+                        message: 'Error fetching device info',
+                        indicator: 'red'
+                    }, 5);
+                }
+            });
+        }, __('Device'));
+
+        frm.add_custom_button('View Face', () => {
+
+            frappe.prompt([
+                {
+                    label: 'Employee ID',
+                    fieldname: 'emp_no',
+                    fieldtype: 'Data',
+                    reqd: 1
+                }
+            ], (values) => {
+
+                frappe.call({
+                    method: 'biometric_integration.biometric_integration.doctype.biometric_integration_settings.biometric_integration_settings.get_employee_face',
+                    args: {
+                        emp_no: values.emp_no
+                    },
+                    freeze: true,
+                    freeze_message: 'Fetching face...',
+                    callback: function(r) {
+
+                        if (r.message.status === "success") {
+
+                            let img_html = "";
+
+                            if (r.message.type === "url") {
+                                img_html = `<img src="${r.message.data}" style="max-width:100%;">`;
+                            }
+
+                            if (r.message.type === "base64") {
+                                img_html = `<img src="data:image/jpeg;base64,${r.message.data}" style="max-width:100%;">`;
+                            }
+
+                            frappe.msgprint({
+                                title: "Employee Face",
+                                message: img_html
+                            });
+
+                        } else {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+
+            }, 'Enter Employee ID', 'Fetch');
+
+        }, __('Device'));
+
         frm.add_custom_button(__('Update Employee Name'), function() {
             const d = new frappe.ui.Dialog({
                 title: __('Set Employee Name on Device'),
@@ -110,7 +185,6 @@ frappe.ui.form.on('Biometric Integration Settings', {
                         label: __('Employee Name'),
                         fieldname: 'emp_name',
                         fieldtype: 'Data',
-                        reqd: 1
                     }
                 ],
                 primary_action_label: __('Save'),
@@ -136,7 +210,7 @@ frappe.ui.form.on('Biometric Integration Settings', {
                 }
             });
             d.show();
-        }, __('Set to Device'));
+        }, __('Device'));
 
         frm.add_custom_button(__('Test Device Connection'), function() {
             frappe.call({

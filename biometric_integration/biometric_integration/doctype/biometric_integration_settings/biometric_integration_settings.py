@@ -8,8 +8,104 @@ from datetime import datetime, timedelta
 from frappe.model.document import Document
 
 class BiometricIntegrationSettings(Document):
-    pass
+    def before_save(self):
+        try:
+            if not self.ip or not self.username:
+                return
 
+            password = self.get_password("password")
+            if not password:
+                return
+
+            url = f"http://{self.ip}/ISAPI/System/deviceInfo"
+
+            response = requests.get(
+                url,
+                auth=HTTPDigestAuth(self.username, password),
+                timeout=10,
+                verify=False
+            )
+
+            if response.status_code != 200:
+                return
+
+            import xml.etree.ElementTree as ET
+
+            root = ET.fromstring(response.content)
+            ns = {'ns': 'http://www.isapi.org/ver20/XMLSchema'}
+
+            self.device_name = root.find('ns:deviceName', ns).text if root.find('ns:deviceName', ns) is not None else ""
+            self.device_id = root.find('ns:deviceID', ns).text if root.find('ns:deviceID', ns) is not None else ""
+            self.model = root.find('ns:model', ns).text if root.find('ns:model', ns) is not None else ""
+            self.device_serial_number = root.find('ns:serialNumber', ns).text if root.find('ns:serialNumber', ns) is not None else ""
+            self.mac_address = root.find('ns:macAddress', ns).text if root.find('ns:macAddress', ns) is not None else ""
+
+        except Exception as e:
+            frappe.log_error(f"Device info fetch failed: {str(e)}", "Biometric Device Info")
+
+@frappe.whitelist()
+def fetch_device_info():
+    doc = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
+    doc.before_save()
+    doc.save(ignore_permissions=True)
+
+    return {
+        "status": "success",
+        "message": "Device info updated successfully"
+    }
+
+@frappe.whitelist()
+def get_employee_face(emp_no):
+    try:
+        settings = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
+        password = settings.get_password("password")
+
+        url = f"http://{settings.ip}/ISAPI/AccessControl/UserInfo/Search?format=json"
+        headers = {"Content-Type": "application/json"}
+
+        payload = {
+            "UserInfoSearchCond": {
+                "searchID": "face-fetch",
+                "searchResultPosition": 0,
+                "maxResults": 1,
+                "EmployeeNoList": [{"employeeNo": str(emp_no)}]
+            }
+        }
+
+        response = requests.post(
+            url,
+            auth=HTTPDigestAuth(settings.username, password),
+            headers=headers,
+            json=payload,
+            verify=False,
+            timeout=30,
+        )
+
+        if response.status_code != 200:
+            return {"status": "error", "message": f"HTTP {response.status_code}"}
+
+        data = response.json()
+        user_info = data.get("UserInfoSearch", {}).get("UserInfo", [])
+
+        if not user_info:
+            return {"status": "error", "message": "Employee not found"}
+
+        # 👉 Hikvision stores face under faceURL OR faceData
+        face_url = user_info[0].get("faceURL")
+        face_data = user_info[0].get("faceData")
+
+        if face_url:
+            return {"status": "success", "type": "url", "data": face_url}
+
+        if face_data:
+            return {"status": "success", "type": "base64", "data": face_data}
+
+        return {"status": "error", "message": "No face found"}
+
+    except Exception as e:
+        frappe.log_error(f"Face fetch failed: {str(e)}", "Biometric Face Fetch")
+        return {"status": "error", "message": str(e)}
+    
 @frappe.whitelist()
 def check_machine_connection():
     try:
@@ -129,18 +225,24 @@ def _get_employee_name_from_device(settings, password, emp_no):
     return ""
 
 @frappe.whitelist()
-def set_employee_name_on_device(emp_no, emp_name):
+def set_employee_name_on_device(emp_no, emp_name=None):
     try:
         settings = frappe.get_doc("Biometric Integration Settings", "Biometric Integration Settings")
         password = settings.get_password("password")
 
+        if not emp_no:
+            return {"status": "error", "message": "Employee No is required"}
+
         url = f"http://{settings.ip}/ISAPI/AccessControl/UserInfo/Modify?format=json"
         headers = {"Content-Type": "application/json"}
+
+        # 👉 If emp_name not passed OR empty → remove name
+        name_value = str(emp_name) if emp_name else ""
 
         payload = {
             "UserInfo": {
                 "employeeNo": str(emp_no),
-                "name": str(emp_name)
+                "name": name_value
             }
         }
 
@@ -154,7 +256,10 @@ def set_employee_name_on_device(emp_no, emp_name):
         )
 
         if response.status_code == 200:
-            return {"status": "success", "message": f"Name '{emp_name}' saved for employee {emp_no} on device."}
+            if name_value:
+                return {"status": "success", "message": f"Name '{name_value}' updated for employee {emp_no}"}
+            else:
+                return {"status": "success", "message": f"Name removed for employee {emp_no}"}
 
         return {"status": "error", "message": f"Device returned HTTP {response.status_code}: {response.text}"}
 
