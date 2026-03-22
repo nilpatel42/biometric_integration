@@ -13,13 +13,17 @@
  "link_to": "Biometric Integration",
  "link_type": "Workspace Sidebar",
  "logo_url": "/assets/biometric_integration/bio-icon-1.webp",
- "modified": "2026-03-13 11:33:04.847026",
+ "modified": "2026-03-21 13:58:21.723844",
  "modified_by": "Administrator",
  "name": "Biometric Integration",
  "owner": "Administrator",
  "parent_icon": "",
  "restrict_removal": 0,
- "roles": [],
+ "roles": [
+  {
+   "role": "CE HR"
+  }
+ ],
  "sidebar": "Biometric Integration",
  "standard": 1
 }
