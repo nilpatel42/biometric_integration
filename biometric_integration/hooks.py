@@ -11,15 +11,15 @@ app_license = "mit"
 required_apps = ["erpnext", "hrms"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "biometric_integration",
-# 		"logo": "/assets/biometric_integration/logo.png",
-# 		"title": "Biometric Integration",
-# 		"route": "/biometric_integration",
-# 		"has_permission": "biometric_integration.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "biometric_integration",
+		"logo": "/assets/biometric_integration/bio-icon-1.webp",
+		"title": "Biometric Integration",
+		"route": "/desk/biometric-integration",
+		"has_permission": "erpnext.check_app_permission"
+	}
+]
 
 # Includes in <head>
 # ------------------
@@ -254,10 +254,3 @@ scheduler_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
-add_to_apps_screen = [{
-    "name": "biometric_integration",
-    "logo": "/assets/biometric_integration/Biometric.webp",
-    "title": "Biometric",
-    "has_permission": "erpnext.check_app_permission",
-}]

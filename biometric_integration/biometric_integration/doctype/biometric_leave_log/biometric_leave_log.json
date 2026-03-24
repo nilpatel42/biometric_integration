@@ -42,18 +42,24 @@
    "default": "0",
    "fieldname": "full_day",
    "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Full Day"
   },
   {
    "depends_on": "eval: !doc.full_day",
    "fieldname": "leave_to",
    "fieldtype": "Time",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Leave To"
   },
   {
    "depends_on": "eval: !doc.full_day",
    "fieldname": "leave_from",
    "fieldtype": "Time",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Leave From"
   }
  ],
@@ -61,7 +67,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-13 18:48:04.115571",
+ "modified": "2026-03-24 16:51:34.676518",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Leave Log",
