@@ -1,7 +1,7 @@
 {
  "app": "biometric_integration",
  "charts": [],
- "content": "[{\"id\":\"ozp8MEGqGG\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Report</span>\",\"col\":12}},{\"id\":\"O08mXs6KSA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Report\",\"col\":3}},{\"id\":\"cZljz4fO1a\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Monthly Report\",\"col\":3}},{\"id\":\"4-hcMvErZl\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"mcP5wljMSA\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"bMqh9IHUV3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Doctype &amp; Log</span>\",\"col\":12}},{\"id\":\"82LgXG3aRj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manual Punch\",\"col\":3}},{\"id\":\"zL7rMZFZMt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Attendance Log\",\"col\":3}},{\"id\":\"2tvASOSKdj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leave Log\",\"col\":3}}]",
+ "content": "[{\"id\":\"tl4vNe6BxH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Biometric Integration Settings\",\"col\":3}},{\"id\":\"vlC-MRCb2g\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ozp8MEGqGG\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Report</span>\",\"col\":12}},{\"id\":\"O08mXs6KSA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Report\",\"col\":3}},{\"id\":\"cZljz4fO1a\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Monthly Report\",\"col\":3}},{\"id\":\"4-hcMvErZl\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"bMqh9IHUV3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Doctype &amp; Log</span>\",\"col\":12}},{\"id\":\"82LgXG3aRj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manual Punch\",\"col\":3}},{\"id\":\"zL7rMZFZMt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Attendance Log\",\"col\":3}},{\"id\":\"2tvASOSKdj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Leave Log\",\"col\":3}}]",
  "creation": "2026-03-08 14:22:25.461808",
  "custom_blocks": [],
  "docstatus": 0,
@@ -9,13 +9,13 @@
  "for_user": "",
  "hide_custom": 0,
  "icon": "grid",
- "idx": 1,
+ "idx": 2,
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Biometric Integration",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-03-08 14:53:26.954389",
+ "modified": "2026-09-28 14:43:29.864136",
  "modified_by": "Administrator",
  "module": "Biometric Integration",
  "name": "Biometric Integration",
@@ -30,16 +30,15 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Manual Punch",
-   "link_to": "Biometric Manual Punch",
-   "stats_filter": "[]",
+   "label": "Biometric Integration Settings",
+   "link_to": "Biometric Integration Settings",
    "type": "DocType"
   },
   {
-   "color": "Grey",
+   "color": "Blue",
    "doc_view": "List",
-   "label": "Attendance Log",
-   "link_to": "Biometric Attendance Log",
+   "label": "Manual Punch",
+   "link_to": "Biometric Manual Punch",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -55,7 +54,15 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Leave Log",
-   "link_to": "Attendance Leave Log",
+   "link_to": "Biometric Leave Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Attendance Log",
+   "link_to": "Biometric Attendance Log",
    "stats_filter": "[]",
    "type": "DocType"
   },
