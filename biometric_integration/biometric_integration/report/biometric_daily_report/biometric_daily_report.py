@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns = [
-        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 300, "align": "left"},
+        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Link", "options": "Employee", "width": 300, "align": "left"},
         {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 100, "align": "center"},
         {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"}
     ]
@@ -20,7 +20,7 @@ def execute(filters=None):
     # Get all active employees with attendance device IDs and employment type
     all_active_employees = frappe.db.sql("""
         SELECT 
-            employee_name,
+            name AS employee_name,
             attendance_device_id,
             employment_type
         FROM 
@@ -36,7 +36,7 @@ def execute(filters=None):
     # Get employees who had at least one punch that day with employment type
     present_employees = frappe.db.sql("""
         SELECT DISTINCT 
-            e.employee_name,
+            e.name AS employee_name,
             e.attendance_device_id,
             e.employment_type
         FROM `tabBiometric Attendance Log` bal
