@@ -2,6 +2,23 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Biometric Daily Report"] = {
+    formatter: function (value, row, column, data, default_formatter) {
+        if (column.fieldname === "employee_name" && data.employee_docname && value) {
+            // Keep the server column as Data so exports contain employee_name.
+            // Mark it as Link in the client so Frappe opens the side panel.
+            column.fieldtype = "Link";
+            column.options = "Employee";
+
+            const employee_name = frappe.utils.escape_html(data.employee_docname);
+            const display_name = frappe.utils.escape_html(value);
+            const href = frappe.utils.get_form_link("Employee", data.employee_docname);
+
+            return `<a href="${href}" data-doctype="Employee" data-name="${employee_name}">${display_name}</a>`;
+        }
+
+        return default_formatter(value, row, column, data);
+    },
+
     filters: [
         {
             fieldname: "date",

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns = [
-        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Link", "options": "Employee", "width": 300, "align": "left"},
+        {"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 300, "align": "left"},
         {"fieldname": "employee_id", "label": _("ID"), "fieldtype": "Data", "width": 100, "align": "center"},
         {"fieldname": "total_duration", "label": _("Total Hours"), "fieldtype": "Data", "width": 100, "align": "center"}
     ]
@@ -20,7 +20,8 @@ def execute(filters=None):
     # Get all active employees with attendance device IDs and employment type
     all_active_employees = frappe.db.sql("""
         SELECT 
-            name AS employee_name,
+            employee_name,
+            name AS employee_docname,
             attendance_device_id,
             employment_type
         FROM 
@@ -36,7 +37,8 @@ def execute(filters=None):
     # Get employees who had at least one punch that day with employment type
     present_employees = frappe.db.sql("""
         SELECT DISTINCT 
-            e.name AS employee_name,
+            e.employee_name,
+            e.name AS employee_docname,
             e.attendance_device_id,
             e.employment_type
         FROM `tabBiometric Attendance Log` bal
@@ -297,6 +299,7 @@ def execute(filters=None):
             row_indicators = {}
             
             row_data["employee_name"] = employee.employee_name
+            row_data["employee_docname"] = employee.employee_docname
             row_data["employee_id"] = employee.attendance_device_id
             
             if len(punches) % 2 != 0:
@@ -403,6 +406,7 @@ def execute(filters=None):
     for employee in absent_active_employees:
         absent_row = {field["fieldname"]: None for field in columns}
         absent_row["employee_name"] = employee.employee_name
+        absent_row["employee_docname"] = employee.employee_docname
         absent_row["employee_id"] = employee.attendance_device_id
 
         early_leave_status = check_early_leave_absent(employee.attendance_device_id, employee.employment_type)
