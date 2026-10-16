@@ -17,7 +17,7 @@ add_to_apps_screen = [
 		"logo": "/assets/biometric_integration/bio-icon-1.webp",
 		"title": "Biometric Integration",
 		"route": "/desk/biometric-integration",
-		"has_permission": "erpnext.check_app_permission"
+		"has_permission": "biometric_integration.api.permission.has_app_permission"
 	}
 ]
 
